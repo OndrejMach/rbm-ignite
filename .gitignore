@@ -1,0 +1,8 @@
+.idea
+*.gz
+.gradle
+build
+spark-warehouse
+out
+src/main/test_data/*
+gradle

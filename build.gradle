@@ -1,0 +1,72 @@
+group 'job_template'
+//version '1.0-SNAPSHOT'
+version='1.0'
+
+apply plugin: 'scala'
+apply plugin: 'com.github.johnrengelman.shadow'
+
+shadowJar {
+    zip64 true
+}
+
+buildscript {
+    repositories {
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "com.github.jengelman.gradle.plugins:shadow:5.2.0"
+    }
+}
+
+
+apply plugin: 'scala'
+group 'ignite'
+version '1.0'
+
+sourceCompatibility = 1.8
+
+repositories {
+    jcenter()
+    mavenCentral()
+    mavenLocal()
+
+    maven {
+        credentials {
+            username NEXUS3_USERNAME
+            password NEXUS3_PASSWORD
+        }
+        url "https://cdcp-wbench.wesp.telekom.net/nexus3/repository/maven-releases/"
+    }
+
+}
+
+dependencies {
+    compile 'spark_common:spark_common:1.1'
+    compile "org.scala-lang:scala-library:2.11.12"
+    compile "org.scala-lang:scala-reflect:2.11.12"
+    compile "org.scala-lang:scala-compiler:2.11.12"
+
+    compile 'org.apache.spark:spark-mllib_2.11:2.3.0'
+    compile 'org.apache.spark:spark-sql_2.11:2.3.0'
+    compile 'org.apache.spark:spark-streaming-flume-assembly_2.11:2.3.0'
+    compile 'org.apache.spark:spark-graphx_2.11:2.3.0'
+    compile 'org.apache.spark:spark-launcher_2.11:2.3.0'
+    compile 'org.apache.spark:spark-catalyst_2.11:2.3.0'
+    compile 'org.apache.spark:spark-streaming_2.11:2.3.0'
+    compile 'org.apache.spark:spark-core_2.11:2.3.0'
+
+    compile 'com.typesafe.scala-logging:scala-logging_2.11:3.9.0'
+    compile 'com.typesafe:config:1.3.3'
+
+    compile 'com.github.fommil.netlib:all:1.1.2'
+    compile "net.sf.ucanaccess:ucanaccess:4.0.4"
+
+    compile group: 'com.crealytics', name: 'spark-excel_2.11', version: '0.12.0'
+
+    testCompile 'org.scalatest:scalatest_2.11:3.0.0'
+    testCompile 'junit:junit:4.12'
+    testCompile 'com.holdenkarau:spark-testing-base_2.11:2.3.0_0.11.0'
+    testCompile 'org.apache.spark:spark-hive_2.11:2.3.0'
+}
