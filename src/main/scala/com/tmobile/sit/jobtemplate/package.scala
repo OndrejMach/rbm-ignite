@@ -3,6 +3,13 @@ package com.tmobile.sit
 import org.apache.spark.sql.SparkSession
 
 package object jobtemplate {
+  /**
+   * Method for returning SparkSession. It sets some basic parameters which can be easily overwritten in spark-submit on production or test cluster.
+   * It expects appName as a parameter for better identification of this job on cluster where hundreds of applications may be running.
+   * @param sparkAppName - name of the spark application.
+   * @return - SparkSession set according the the desired configuration and resources expected to be available.
+   */
+
   def getSparkSession(sparkAppName: String): SparkSession = {
     SparkSession.builder()
       //.appName("Test FWLog Reader")
