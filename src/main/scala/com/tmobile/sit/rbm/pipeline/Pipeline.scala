@@ -1,4 +1,4 @@
-package com.tmobile.sit.jobtemplate.pipeline
+package com.tmobile.sit.rbm.pipeline
 
 import com.tmobile.sit.common.writers.Writer
 
@@ -10,14 +10,15 @@ import com.tmobile.sit.common.writers.Writer
  * @param writer - final writer storing data in the desired format (CSV here)
  */
 
-class Pipeline(inputData: InputData, stage: TemplateStageProcessing, core: ProcessingCore, writer: Writer) {
+class Pipeline(inputData: InputData, stage: StageProcessing, core: ProcessingCore, writer: ResultWriter) {
   def run(): Unit = {
 
-    val preprocessedData = PreprocessedData(stage.preprocessPeople(inputData.people.read()),stage.preprocessSalaryInfo(inputData.salaryInfo.read()) )
+    val preprocessedData = PreprocessedData(stage.preprocessActivity(inputData.rbm_activity.read()),
+                           stage.preprocessEvents(inputData.rbm_billable_events.read()) )
 
     val result = core.process(preprocessedData)
 
-    writer.writeData(result)
+    writer.write(result)
   }
 
 }

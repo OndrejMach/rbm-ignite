@@ -1,10 +1,10 @@
-package com.tmobile.sit.jobtemplate
+package com.tmobile.sit.rbm
 
 import com.tmobile.sit.common.Logger
 import com.tmobile.sit.common.readers.CSVReader
-import com.tmobile.sit.common.writers.CSVWriter
-import com.tmobile.sit.jobtemplate.config.Setup
-import com.tmobile.sit.jobtemplate.pipeline.{CoreLogicWithTransform, InputData, Pipeline, TemplateStage}
+import com.tmobile.sit.rbm.config.Setup
+import com.tmobile.sit.rbm.pipeline.{CoreLogicWithTransform, InputData, Pipeline, ResultPaths, ResultWriter, Stage}
+import org.apache.spark.sql.SparkSession
 
 /**
  * Main object and entry point to the the job processing. It handles configuration and initialised all the processing steps. This design provides
@@ -22,7 +22,15 @@ object Processor extends App with Logger {
   /**
    * initialising settings and configuration parameters
    */
-  val conf = new Setup()
+  val configFile = if(System.getProperty("os.name").startsWith("Windows")) {
+    logger.info("Detected Windows configuration")
+    "rbm_config.windows.conf"
+  } else {
+    logger.info("Detected Linux configuration")
+    "rbm_config.linux.conf"
+  }
+
+  val conf = new Setup(configFile)
 
   /**
    * checking all the configuration is available and valid. If not program exits with 1 exit code. Before doing so it also prints the parameters which are missing or invalid.
@@ -40,20 +48,20 @@ object Processor extends App with Logger {
   /**
    * Creating implicit SparkSession used in the processing blocks.
    */
-  implicit val sparkSession = getSparkSession(conf.settings.appName.get)
+  implicit val sparkSession: SparkSession = getSparkSession(conf.settings.appName.get)
 
   /**
    * Creating readers for input data wrapped in a case class.
    */
   val inputReaders = InputData(
-    people = new CSVReader(conf.settings.inputPathPeople.get, header = true),
-    salaryInfo = new CSVReader(conf.settings.inputPathSalaryInfo.get, header = true)
+    rbm_activity = new CSVReader(conf.settings.inputPath.get + "rbm_activity_2019-01-25_mt.csv", header = true),
+    rbm_billable_events = new CSVReader(conf.settings.inputPath.get + "rbm_billable_events_2019-10-06_mt.csv", header = true)
   )
 
   /**
    * creating staging step class for preprocessing/
    */
-  val stage = new TemplateStage()
+  val stage = new Stage()
 
   /**
    * creating class responsible for core of the processing.
@@ -63,8 +71,8 @@ object Processor extends App with Logger {
   /**
    * Creating final writes storing resulting data into a CSV file.
    */
-  val resultWriter = new CSVWriter(conf.settings.outputPath.get, writeHeader = true)
-
+  val resultPaths = ResultPaths(conf.settings.lookupPath.get, conf.settings.outputPath.get)
+  val resultWriter = new ResultWriter(resultPaths)
   /**
    * Creating a pipeline where all the steps are executed in the desired order. Processing steps classes
    * are passed as class parameters.

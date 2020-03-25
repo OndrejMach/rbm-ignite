@@ -1,4 +1,4 @@
-group 'job_template'
+group 'rbm-ignite'
 //version '1.0-SNAPSHOT'
 version='1.0'
 
@@ -43,7 +43,7 @@ repositories {
 }
 
 dependencies {
-    compile 'spark_common:spark_common:1.1'
+    compile 'spark_common:spark_common:1.5'
     compile "org.scala-lang:scala-library:2.11.12"
     compile "org.scala-lang:scala-reflect:2.11.12"
     compile "org.scala-lang:scala-compiler:2.11.12"

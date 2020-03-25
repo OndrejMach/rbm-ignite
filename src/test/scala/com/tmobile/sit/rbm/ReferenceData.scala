@@ -1,4 +1,4 @@
-package com.tmobile.sit.jobtemplate
+package com.tmobile.sit.rbm
 
 final case class InputRowCSV(id: Option[Int], name: Option[String], address: Option[String],notes: Option[String])
 

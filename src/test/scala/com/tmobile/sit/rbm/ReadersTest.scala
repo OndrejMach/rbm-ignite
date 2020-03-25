@@ -1,4 +1,4 @@
-package com.tmobile.sit.jobtemplate
+package com.tmobile.sit.rbm
 
 import com.holdenkarau.spark.testing.DataFrameSuiteBase
 import com.tmobile.sit.common.readers.{CSVMultifileReader, CSVReader, ExcelReader, MSAccessReader}
@@ -8,7 +8,7 @@ import org.scalatest.FlatSpec
 import org.scalatest.junit.JUnitRunner
 
 @RunWith(classOf[JUnitRunner])
-class JobTemplateTest extends FlatSpec with DataFrameSuiteBase {
+class ReadersTest extends FlatSpec with DataFrameSuiteBase {
   implicit lazy val _: SparkSession = spark
 
   "csvReaderPeople" should "read csv with header" in {
