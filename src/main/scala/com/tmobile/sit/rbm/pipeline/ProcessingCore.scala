@@ -27,7 +27,6 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
   }
 
   def getAgentMapping(rbm_activity: DataFrame, rbm_billable_events: DataFrame): DataFrame = {
-    val windowSpec  = Window.partitionBy("Agent").orderBy("Agent")
 
     rbm_activity.select("agent_id")
       .union(rbm_billable_events.select("agent_id"))
@@ -64,12 +63,25 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
     ContentMapping.createOrReplaceTempView("ContentMapping")
     AgentMapping.createOrReplaceTempView("AgentMapping")
 
-    sparkSession.sql("select * from ActivitiesWithMessageTypes a " +
+    /*sparkSession.sql("select * from ActivitiesWithMessageTypes a " +
       "left join AgentMapping ag " +
       "on a.Agent == ag.Agent " +
       "left join ContentMapping c " +
-      "on a.type == c.type ")
-      .drop("Agent", "type")
+      "on a.type == c.type ")*/
+
+    ActivitiesWithMessageTypes
+      .join(ContentMapping, ContentMapping("type") === ActivitiesWithMessageTypes("type"), "left")
+      .join(AgentMapping, AgentMapping("Agent") === ActivitiesWithMessageTypes("Agent"), "left")
+      .withColumn("ContentID", col("activity_id"))
+      //TODO: change this workaround to work with lookup table
+      .withColumn("NatCoID",
+        when(col("NatCo") === "mt", "1")
+        .otherwise(when(col("NatCo") === "cg", "2")
+          .otherwise(when(col("NatCo") === "st", "3")
+            .otherwise(when(col("NatCo") === "cr", "4")
+              .otherwise("-1")))))
+      .drop("Agent", "type","NatCo", "activity_id")
+      .select("Date", "NatCoID", "ContentID", "AgentID", "MT_MessagesByType", "MO_MessagesByType", "MTMO_MessagesByType")
 
       //.join(NatCoMapping, activitiesWithMessageTypes("NatCo") === NatCoMapping("NatCo"), "left")
       //.join(ContentMapping, activityGrouped("type") === ContentMapping("type"), "left")
