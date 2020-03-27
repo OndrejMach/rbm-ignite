@@ -6,6 +6,7 @@ import com.tmobile.sit.rbm.config.Setup
 import com.tmobile.sit.rbm.pipeline.{CoreLogicWithTransform, InputData, Pipeline, ResultPaths, ResultWriter, Stage}
 import org.apache.spark.sql.SparkSession
 
+
 /**
  * Main object and entry point to the the job processing. It handles configuration and initialised all the processing steps. This design provides
  * better insight into what is actually done with the data and also helps with application testing. It is very easy to test each component and step
@@ -54,8 +55,11 @@ object Processor extends App with Logger {
    * Creating readers for input data wrapped in a case class.
    */
   val inputReaders = InputData(
-    rbm_activity = new CSVReader(conf.settings.inputPath.get + "rbm_activity_2019-01-25_mt.csv", header = true),
-    rbm_billable_events = new CSVReader(conf.settings.inputPath.get + "rbm_billable_events_2019-10-06_mt.csv", header = true)
+    rbm_activity = new CSVReader(conf.settings.inputPath.get + "rbm_activity_*_mt.csv", header = true, delimiter = ";"),
+    rbm_billable_events = new CSVReader(conf.settings.inputPath.get + "rbm_billable_events_*_mt.csv", header = true, delimiter = ";"),
+    file_natco_date = "2019-01-25",
+    file_natco_id = "mt",
+    NatCoMapping =  new CSVReader("src/main/resources/inputData/NatCoMapping.csv", header = true, delimiter = ";")
   )
 
   /**

@@ -1,7 +1,7 @@
 package com.tmobile.sit.rbm.pipeline
 
 import com.tmobile.sit.common.Logger
-import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions.lit
 
 /**
@@ -9,21 +9,25 @@ import org.apache.spark.sql.functions.lit
  */
 
 trait StageProcessing extends Logger{
-  def preprocessActivity(input: DataFrame) : DataFrame
-  def preprocessEvents(input: DataFrame) : DataFrame
+  def preprocessActivity(input: DataFrame, natco_id: String) : DataFrame
+  def preprocessEvents(input: DataFrame, natco_id: String) : DataFrame
+  def preprocessNatCoMapping(input: DataFrame) : DataFrame
 }
 
 /**
  * Preprocessing implementation, two methods - one for people table preprocessing and one for salaryInfo preprocessing.
  */
-class Stage extends StageProcessing {
+class Stage  (implicit sparkSession: SparkSession) extends StageProcessing {
+  import sparkSession.sqlContext.implicits._
   /**
    * Prepares people data for processing. Basically a simple step dropping one column and filtering data based on the ID value.
    * @param rbmActivity - a DataFrame containing people table read from CSV
    * @return - people data tuned and preprocessed.
    */
-  override def preprocessActivity(rbmActivity: DataFrame): DataFrame = {
-    rbmActivity
+
+
+  override def preprocessActivity(rbmActivity: DataFrame, natco_id: String): DataFrame = {
+    rbmActivity.withColumn("NatCo", lit(natco_id))
   }
 
   /**
@@ -31,7 +35,11 @@ class Stage extends StageProcessing {
    * @param rbmEvents - input salaryInfo table from csv.
    * @return - preprocessed data as DataFrame.
    */
-  override def preprocessEvents(rbmEvents: DataFrame) : DataFrame = {
-    rbmEvents
+  override def preprocessEvents(rbmEvents: DataFrame, natco_id: String) : DataFrame = {
+    rbmEvents.withColumn("NatCo", lit(natco_id))
+  }
+
+  override def preprocessNatCoMapping(NatCoMapping: DataFrame): DataFrame = {
+    NatCoMapping
   }
 }

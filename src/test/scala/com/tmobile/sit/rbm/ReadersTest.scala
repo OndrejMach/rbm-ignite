@@ -15,6 +15,7 @@ class ReadersTest extends FlatSpec with DataFrameSuiteBase {
     import spark.implicits._
 
     val csvReader = CSVReader("src/main/resources/inputData/people.csv", true)
+
     val df = csvReader.read().filter("name = 'jarda'")
     val refDF = ReferenceData.people_csv_with_header.toDF
     //df.printSchema()

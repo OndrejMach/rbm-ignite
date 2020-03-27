@@ -1,7 +1,5 @@
 package com.tmobile.sit.rbm.pipeline
 
-import com.tmobile.sit.common.writers.Writer
-
 /**
  * Spark processing pipeline definition. Class takes processing blocks (each processing block is a class) as parameters and executes them in the desired order.
  * @param inputData - raw input data read by the readers
@@ -13,8 +11,12 @@ import com.tmobile.sit.common.writers.Writer
 class Pipeline(inputData: InputData, stage: StageProcessing, core: ProcessingCore, writer: ResultWriter) {
   def run(): Unit = {
 
-    val preprocessedData = PreprocessedData(stage.preprocessActivity(inputData.rbm_activity.read()),
-                           stage.preprocessEvents(inputData.rbm_billable_events.read()) )
+    val preprocessedData =
+      PreprocessedData(
+        stage.preprocessActivity(inputData.rbm_activity.read(),inputData.file_natco_id),
+        stage.preprocessEvents(inputData.rbm_billable_events.read(),inputData.file_natco_id),
+        stage.preprocessNatCoMapping(inputData.NatCoMapping.read())
+      )
 
     val result = core.process(preprocessedData)
 

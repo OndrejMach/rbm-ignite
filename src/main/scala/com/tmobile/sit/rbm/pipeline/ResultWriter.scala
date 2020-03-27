@@ -11,6 +11,8 @@ class ResultWriter(resultPaths: ResultPaths) (implicit sparkSession: SparkSessio
   override def write(outputData: OutputData) =
   {
     /* Write output files*/
-    CSVWriter(outputData.rbmFact, resultPaths.outputPath+"fact_rbm.csv", delimiter = ";").writeData()
+    CSVWriter(outputData.NatCoMapping, resultPaths.outputPath+"NatCoMapping.csv", delimiter = ";").writeData()
+    CSVWriter(outputData.ContentMapping, resultPaths.outputPath+"ContentMapping.csv", delimiter = ";").writeData()
+    CSVWriter(outputData.AgentMapping, resultPaths.outputPath+"AgentMapping.csv", delimiter = ";").writeData()
   }
 }
