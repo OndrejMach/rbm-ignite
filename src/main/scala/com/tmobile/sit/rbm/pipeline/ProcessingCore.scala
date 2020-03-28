@@ -19,7 +19,6 @@ trait ProcessingCore extends Logger {
  * This split should help with readability and structure. Core of the processing is method process which is basically ran first.
  */
 class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends ProcessingCore {
-  import sparkSession.sqlContext.implicits._
 
   def getContentMapping(rbm_activity: DataFrame): DataFrame  = {
     // Select distinct activity_id and type pairs
@@ -38,7 +37,6 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
 
   def getMessagesByType(rbm_activity: DataFrame, NatCoMapping: DataFrame,
                         ContentMapping: DataFrame, AgentMapping: DataFrame): DataFrame = {
-
     // Count MT and MO messages per group
      val activityGroupedByDirection = rbm_activity
       .withColumn("Date", split(col("time"), " ").getItem(0))
@@ -148,13 +146,17 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
       .drop("Agent","NatCo")
       .select("Date","NatCoID","AgentID","TypeOfConvID","MO_messages", "MT_messages","MTMO_messages")
 
-
     eventsByConvAllTypes
-
   }
 
   /**
-   * TODO: Implement core processing class methods to deal with data
+   * The process class creates the output files as follows:
+   * NatCoMapping - static mapping coming from Stage layer
+   * ContentMapping - based on rbm_activity data
+   * AgentMapping - based on rbm_activity and rbm_billable_events data
+   * MessagesByType - based on rbm_activity data and lookups
+   * NoOfConvAndSM - based on rbm_billable_events data and lookups
+   * NoOfMessByTypeOfConv - based on rbm_billable_events data and lookups
    */
   override def process(preprocessedData: PreprocessedData): OutputData = {
     logger.info("Executing  processing core")
