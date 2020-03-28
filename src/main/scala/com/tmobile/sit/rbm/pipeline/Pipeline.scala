@@ -14,7 +14,7 @@ class Pipeline(inputData: InputData, stage: StageProcessing, core: ProcessingCor
     val preprocessedData =
       PreprocessedData(
         stage.preprocessActivity(inputData.rbm_activity.read(),inputData.file_natco_id),
-        stage.preprocessEvents(inputData.rbm_billable_events.read(),inputData.file_natco_id),
+        stage.preprocessEvents(inputData.rbm_billable_events.read(),inputData.file_natco_id, inputData.file_date),
         stage.preprocessNatCoMapping(inputData.NatCoMapping.read())
       )
 

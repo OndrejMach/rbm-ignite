@@ -9,8 +9,8 @@ import org.apache.spark.sql.functions.lit
  */
 
 trait StageProcessing extends Logger{
-  def preprocessActivity(input: DataFrame, natco_id: String) : DataFrame
-  def preprocessEvents(input: DataFrame, natco_id: String) : DataFrame
+  def preprocessActivity(input: DataFrame, file_natco_id: String) : DataFrame
+  def preprocessEvents(input: DataFrame, file_natco_id: String, file_date: String) : DataFrame
   def preprocessNatCoMapping(input: DataFrame) : DataFrame
 }
 
@@ -26,8 +26,8 @@ class Stage  (implicit sparkSession: SparkSession) extends StageProcessing {
    */
 
 
-  override def preprocessActivity(rbmActivity: DataFrame, natco_id: String): DataFrame = {
-    rbmActivity.withColumn("NatCo", lit(natco_id))
+  override def preprocessActivity(rbmActivity: DataFrame, file_natco_id: String): DataFrame = {
+    rbmActivity.withColumn("NatCo", lit(file_natco_id))
   }
 
   /**
@@ -35,8 +35,9 @@ class Stage  (implicit sparkSession: SparkSession) extends StageProcessing {
    * @param rbmEvents - input salaryInfo table from csv.
    * @return - preprocessed data as DataFrame.
    */
-  override def preprocessEvents(rbmEvents: DataFrame, natco_id: String) : DataFrame = {
-    rbmEvents.withColumn("NatCo", lit(natco_id))
+  override def preprocessEvents(rbmEvents: DataFrame, file_natco_id: String, file_date: String) : DataFrame = {
+    rbmEvents.withColumn("NatCo", lit(file_natco_id))
+      .withColumn("FileDate", lit(file_date))
   }
 
   override def preprocessNatCoMapping(NatCoMapping: DataFrame): DataFrame = {

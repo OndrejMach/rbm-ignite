@@ -39,39 +39,33 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
   def getMessagesByType(rbm_activity: DataFrame, NatCoMapping: DataFrame,
                         ContentMapping: DataFrame, AgentMapping: DataFrame): DataFrame = {
 
-     val activityGrouped = rbm_activity
+    // Count MT and MO messages per group
+     val activityGroupedByDirection = rbm_activity
       .withColumn("Date", split(col("time"), " ").getItem(0))
       .withColumn("Agent", split(col("agent_id"), "@").getItem(0))
-      .select("Date", "NatCo", "Agent", "type", "Agent", "direction")
-      .groupBy("Date", "NatCo", "Agent", "type", "Agent","direction")
+      .select("Date", "NatCo", "Agent", "type", "direction")
+      .groupBy("Date", "NatCo", "Agent", "type","direction")
       .agg(count("type").alias("Count"))
 
-    val ActivitiesWithMessageTypes = activityGrouped
+    val activitiesGrouped_AllDirections = activityGroupedByDirection
+      // Get MT+MO counts by not grouping on direction
       .groupBy("Date", "NatCo", "Agent", "type")
       .agg(sum("Count").alias("MTMO_MessagesByType"))
-      .join(activityGrouped.filter(col("direction") === "mt"),
+      // Add MT message counts from previous step
+      .join(activityGroupedByDirection.filter(col("direction") === "mt"),
         Seq("Date", "NatCo", "Agent", "type"), "left")
       .withColumn("MT_MessagesByType", when(col("Count").isNull, 0).otherwise(col("Count")))
       .drop("direction", "Count")
-      .join(activityGrouped.filter(col("direction") === "mo"),
+      // Add MO message counts from previous step
+      .join(activityGroupedByDirection.filter(col("direction") === "mo"),
         Seq("Date", "NatCo", "Agent", "type"), "left")
       .withColumn("MO_MessagesByType", when(col("Count").isNull, 0).otherwise(col("Count")))
       .drop("direction", "Count")
 
-    ActivitiesWithMessageTypes.createOrReplaceTempView("ActivitiesWithMessageTypes")
-    NatCoMapping.createOrReplaceTempView("NatCoMapping")
-    ContentMapping.createOrReplaceTempView("ContentMapping")
-    AgentMapping.createOrReplaceTempView("AgentMapping")
-
-    /*sparkSession.sql("select * from ActivitiesWithMessageTypes a " +
-      "left join AgentMapping ag " +
-      "on a.Agent == ag.Agent " +
-      "left join ContentMapping c " +
-      "on a.type == c.type ")*/
-
-    ActivitiesWithMessageTypes
-      .join(ContentMapping, ContentMapping("type") === ActivitiesWithMessageTypes("type"), "left")
-      .join(AgentMapping, AgentMapping("Agent") === ActivitiesWithMessageTypes("Agent"), "left")
+    // Create final MessagesByType fact by joining on Lookups to get the FKs
+    activitiesGrouped_AllDirections
+      .join(ContentMapping, ContentMapping("type") === activitiesGrouped_AllDirections("type"), "left")
+      .join(AgentMapping, AgentMapping("Agent") === activitiesGrouped_AllDirections("Agent"), "left")
       .withColumn("ContentID", col("activity_id"))
       //TODO: change this workaround to work with lookup table
       .withColumn("NatCoID",
@@ -83,9 +77,79 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
       .drop("Agent", "type","NatCo", "activity_id")
       .select("Date", "NatCoID", "ContentID", "AgentID", "MT_MessagesByType", "MO_MessagesByType", "MTMO_MessagesByType")
 
-      //.join(NatCoMapping, activitiesWithMessageTypes("NatCo") === NatCoMapping("NatCo"), "left")
-      //.join(ContentMapping, activityGrouped("type") === ContentMapping("type"), "left")
-      //.join(AgentMapping, Seq("Agent"), "left")
+  }
+
+  def getNoOfConvAndSM(rbm_billable_events: DataFrame, NatCoMapping: DataFrame,
+                       AgentMapping: DataFrame):DataFrame = {
+    // Count MT and MO messages per group
+    val eventsByMessageType = rbm_billable_events
+      //TODO: Determine what date should be used here
+      .withColumn("Date", split(col("FileDate"), " ").getItem(0))
+      .withColumn("Agent", split(col("agent_id"), "@").getItem(0))
+      .select("Date", "NatCo", "Agent", "type")
+      .groupBy("Date", "NatCo", "Agent", "type")
+      .agg(count("type").alias("Count"))
+
+    val eventsMessageAllTypes = eventsByMessageType
+        .filter(col("type") =!= "single_message")
+        .withColumnRenamed("Count", "NoOfConv")
+        .withColumnRenamed("type", "TypeOfConv")
+        .join(eventsByMessageType
+          .filter(col("type") === "single_message")
+          .withColumnRenamed("type", "TypeOfSM"),
+        Seq("Date", "NatCo", "Agent"),
+        "left")
+        .withColumn("NoOfSM", when(col("Count").isNull, 0).otherwise(col("Count")))
+        .drop("Count")
+
+    eventsMessageAllTypes
+      .join(AgentMapping, AgentMapping("Agent") === eventsMessageAllTypes("Agent"), "left")
+      //TODO: change this workaround to work with lookup table
+      .withColumn("NatCoID",
+        when(col("NatCo") === "mt", "1")
+          .otherwise(when(col("NatCo") === "cg", "2")
+            .otherwise(when(col("NatCo") === "st", "3")
+              .otherwise(when(col("NatCo") === "cr", "4")
+                .otherwise("-1")))))
+      .withColumn("TypeOfConvID",
+        when(col("TypeOfConv") === "a2p_conversation", "1")
+          .otherwise(when(col("TypeOfConv") === "p2a_conversation", "2")))
+      .select("Date", "NatCoID", "AgentID", "TypeOfConvID", "TypeOfConv", "NoOfConv", "TypeOfSM","NoOfSM")
+
+  }
+
+  def getNoOfMessByTypeOfConv(rbm_billable_events: DataFrame,
+                              NatCoMapping: DataFrame,
+                              AgentMapping: DataFrame):DataFrame = {
+
+    val eventsByConvType = rbm_billable_events
+      //TODO: Determine what date should be used here
+      .withColumn("Date", split(col("FileDate"), " ").getItem(0))
+      .withColumn("Agent", split(col("agent_id"), "@").getItem(0))
+      .select("Date", "NatCo", "Agent", "type", "mt_messages", "mo_messages")
+      .groupBy("Date", "NatCo", "Agent", "type")
+      .agg(sum("mo_messages").alias("MO_messages"),
+        sum("mt_messages").alias("MT_messages"))
+      .withColumn("MTMO_messages", col("mo_messages") + col("mt_messages"))
+
+    val eventsByConvAllTypes = eventsByConvType
+      .filter(col("type") =!= "single_message")
+      .join(AgentMapping, AgentMapping("Agent") === eventsByConvType("Agent"), "left")
+      //TODO: change this workaround to work with lookup table
+      .withColumn("NatCoID",
+        when(col("NatCo") === "mt", "1")
+          .otherwise(when(col("NatCo") === "cg", "2")
+            .otherwise(when(col("NatCo") === "st", "3")
+              .otherwise(when(col("NatCo") === "cr", "4")
+                .otherwise("-1")))))
+      .withColumn("TypeOfConvID",
+        when(col("type") === "a2p_conversation", "1")
+        .otherwise(when(col("type") === "p2a_conversation", "2")))
+      .drop("Agent","NatCo")
+      .select("Date","NatCoID","AgentID","TypeOfConvID","MO_messages", "MT_messages","MTMO_messages")
+
+
+    eventsByConvAllTypes
 
   }
 
@@ -95,12 +159,25 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
   override def process(preprocessedData: PreprocessedData): OutputData = {
     logger.info("Executing  processing core")
 
+    val NatCoMapping = preprocessedData.NatCoMapping
     val ContentMapping = getContentMapping(preprocessedData.rbm_activity)
     val AgentMapping = getAgentMapping(preprocessedData.rbm_activity,preprocessedData.rbm_billable_events)
-    val MessagesByType = getMessagesByType(preprocessedData.rbm_activity, preprocessedData.NatCoMapping, ContentMapping, AgentMapping)
 
-    MessagesByType.show()
+    val MessagesByType = getMessagesByType(preprocessedData.rbm_activity,
+      NatCoMapping, /*Not actually used because of compilation bug. Used static mapping instead.*/
+      ContentMapping,
+      AgentMapping)
 
-    OutputData(preprocessedData.NatCoMapping, ContentMapping, AgentMapping)
+    val NoOfConvAndSM = getNoOfConvAndSM(preprocessedData.rbm_billable_events,
+      NatCoMapping, /*Not actually used because of compilation bug. Used static mapping instead.*/
+      AgentMapping)
+
+    val NoOfMessByTypeOfConv = getNoOfMessByTypeOfConv(preprocessedData.rbm_billable_events,
+      NatCoMapping, /*Not actually used because of compilation bug. Used static mapping instead.*/
+      AgentMapping)
+
+    NoOfConvAndSM.show()
+
+    OutputData(NatCoMapping, ContentMapping, AgentMapping, MessagesByType, NoOfConvAndSM, NoOfMessByTypeOfConv)
   }
 }

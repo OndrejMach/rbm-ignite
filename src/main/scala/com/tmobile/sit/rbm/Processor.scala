@@ -57,7 +57,7 @@ object Processor extends App with Logger {
   val inputReaders = InputData(
     rbm_activity = new CSVReader(conf.settings.inputPath.get + "rbm_activity_*_mt.csv", header = true, delimiter = ";"),
     rbm_billable_events = new CSVReader(conf.settings.inputPath.get + "rbm_billable_events_*_mt.csv", header = true, delimiter = ";"),
-    file_natco_date = "2019-01-25",
+    file_date = "2019-01-25",
     file_natco_id = "mt",
     NatCoMapping =  new CSVReader("src/main/resources/inputData/NatCoMapping.csv", header = true, delimiter = ";")
   )
