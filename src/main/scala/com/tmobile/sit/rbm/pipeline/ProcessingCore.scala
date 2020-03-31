@@ -1,7 +1,7 @@
 package com.tmobile.sit.rbm.pipeline
 
 import com.tmobile.sit.common.Logger
-import org.apache.spark.sql.functions.{col, split, row_number, count, sum, when}
+import org.apache.spark.sql.functions.{col, split, row_number, count, sum, when, lit}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.expressions.Window
 
@@ -87,6 +87,9 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
       .select("Date", "NatCo", "Agent", "type")
       .groupBy("Date", "NatCo", "Agent", "type")
       .agg(count("type").alias("Count"))
+      .withColumn("TypeOfConvID",
+        when(col("type") === "a2p_conversation", "1")
+          .otherwise(when(col("type") === "p2a_conversation", "2")))
 
     val eventsMessageAllTypes = eventsByMessageType
         .filter(col("type") =!= "single_message")
@@ -94,11 +97,14 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
         .withColumnRenamed("type", "TypeOfConv")
         .join(eventsByMessageType
           .filter(col("type") === "single_message")
+          .withColumn("TypeOfConvID",lit("1"))
           .withColumnRenamed("type", "TypeOfSM"),
-        Seq("Date", "NatCo", "Agent"),
-        "left")
+        Seq("Date", "NatCo", "Agent", "TypeOfConvID"),
+        "fullouter")
         .withColumn("NoOfSM", when(col("Count").isNull, 0).otherwise(col("Count")))
         .drop("Count")
+
+    eventsMessageAllTypes.show()
 
     eventsMessageAllTypes
       .join(AgentMapping, AgentMapping("Agent") === eventsMessageAllTypes("Agent"), "left")
@@ -109,10 +115,11 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
             .otherwise(when(col("NatCo") === "st", "3")
               .otherwise(when(col("NatCo") === "cr", "4")
                 .otherwise("-1")))))
-      .withColumn("TypeOfConvID",
-        when(col("TypeOfConv") === "a2p_conversation", "1")
-          .otherwise(when(col("TypeOfConv") === "p2a_conversation", "2")))
-      .select("Date", "NatCoID", "AgentID", "TypeOfConvID", "TypeOfConv", "NoOfConv", "TypeOfSM","NoOfSM")
+      //fix for a2p single messages which are not part of a conversation
+      .withColumn("NoOfConv",
+        when(col("TypeOfSM") === "single_message" && col("NoOfConv").isNull, "0")
+          .otherwise(col("NoOfConv")))
+      .select("Date", "NatCoID", "AgentID", "TypeOfConvID", /*"TypeOfConv",*/ "NoOfConv", /*"TypeOfSM",*/"NoOfSM")
 
   }
 
@@ -161,25 +168,32 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
   override def process(preprocessedData: PreprocessedData): OutputData = {
     logger.info("Executing  processing core")
 
-    val NatCoMapping = preprocessedData.NatCoMapping
-    val ContentMapping = getContentMapping(preprocessedData.rbm_activity)
-    val AgentMapping = getAgentMapping(preprocessedData.rbm_activity,preprocessedData.rbm_billable_events)
+    val d_natco = preprocessedData.NatCoMapping
+    val d_conversation_type = preprocessedData.NatCoMapping
+    val d_content_type = getContentMapping(preprocessedData.rbm_activity)
+    val d_agent = getAgentMapping(preprocessedData.rbm_activity,preprocessedData.rbm_billable_events)
 
-    val MessagesByType = getMessagesByType(preprocessedData.rbm_activity,
-      NatCoMapping, /*Not actually used because of compilation bug. Used static mapping instead.*/
-      ContentMapping,
-      AgentMapping)
+    val f_message_content = getMessagesByType(preprocessedData.rbm_activity,
+      d_natco, /*Not actually used because of compilation bug. Used static mapping instead.*/
+      d_content_type,
+      d_agent)
 
-    val NoOfConvAndSM = getNoOfConvAndSM(preprocessedData.rbm_billable_events,
-      NatCoMapping, /*Not actually used because of compilation bug. Used static mapping instead.*/
-      AgentMapping)
+    val f_message_conversation = getNoOfMessByTypeOfConv(preprocessedData.rbm_billable_events,
+      d_natco, /*Not actually used because of compilation bug. Used static mapping instead.*/
+      d_agent)
 
-    val NoOfMessByTypeOfConv = getNoOfMessByTypeOfConv(preprocessedData.rbm_billable_events,
-      NatCoMapping, /*Not actually used because of compilation bug. Used static mapping instead.*/
-      AgentMapping)
+    val f_conversations_and_sm = getNoOfConvAndSM(preprocessedData.rbm_billable_events,
+      d_natco, /*Not actually used because of compilation bug. Used static mapping instead.*/
+      d_agent)
 
-    NoOfConvAndSM.show()
+    //NoOfConvAndSM.show()
 
-    OutputData(NatCoMapping, ContentMapping, AgentMapping, MessagesByType, NoOfConvAndSM, NoOfMessByTypeOfConv)
+    OutputData(d_natco,
+      d_content_type,
+      d_conversation_type,
+      d_agent,
+      f_message_content,
+      f_conversations_and_sm,
+      f_message_conversation)
   }
 }

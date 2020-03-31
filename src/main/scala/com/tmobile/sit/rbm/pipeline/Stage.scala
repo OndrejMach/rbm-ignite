@@ -12,6 +12,7 @@ trait StageProcessing extends Logger{
   def preprocessActivity(input: DataFrame, file_natco_id: String) : DataFrame
   def preprocessEvents(input: DataFrame, file_natco_id: String, file_date: String) : DataFrame
   def preprocessNatCoMapping(input: DataFrame) : DataFrame
+  def  preprocessConversationTypeMapping(input: DataFrame) : DataFrame
 }
 
 /**
@@ -42,5 +43,9 @@ class Stage  (implicit sparkSession: SparkSession) extends StageProcessing {
 
   override def preprocessNatCoMapping(NatCoMapping: DataFrame): DataFrame = {
     NatCoMapping
+  }
+
+  override def preprocessConversationTypeMapping(conversationTypeMapping: DataFrame): DataFrame = {
+    conversationTypeMapping
   }
 }

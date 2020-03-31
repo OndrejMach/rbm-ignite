@@ -10,18 +10,21 @@ import org.apache.spark.sql.DataFrame
 case class InputData(rbm_activity: Reader,
                      rbm_billable_events: Reader,
                      NatCoMapping: Reader,
+                     ConversationTypeMapping: Reader,
                      file_natco_id: String,
                      file_date: String)
 
 case class PreprocessedData(rbm_activity: DataFrame,
                             rbm_billable_events: DataFrame,
-                            NatCoMapping: DataFrame)
+                            NatCoMapping: DataFrame,
+                            ConversationTypeMapping: DataFrame)
 
 case class ResultPaths(lookupPath: String, outputPath: String)
 
-case class OutputData(NatCoMapping: DataFrame,
-                      ContentMapping: DataFrame,
-                      AgentMapping: DataFrame,
-                      MessagesByType: DataFrame,
-                      NoOfConvAndSM: DataFrame,
-                      NoOfMessByTypeOfConv: DataFrame)
+case class OutputData(d_natco: DataFrame,
+                      d_content_type: DataFrame,
+                      d_conversation_type: DataFrame,
+                      d_agent: DataFrame,
+                      f_message_content: DataFrame,
+                      f_conversations_and_sm: DataFrame,
+                      f_message_conversation: DataFrame)
