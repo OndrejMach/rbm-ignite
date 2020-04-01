@@ -1,7 +1,7 @@
 package com.tmobile.sit.rbm.pipeline
 
 import com.tmobile.sit.common.Logger
-import org.apache.spark.sql.functions.{col, split, row_number, count, sum, when, lit}
+import org.apache.spark.sql.functions.{col, count, lit, row_number, split, sum, when}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.expressions.Window
 
@@ -20,19 +20,38 @@ trait ProcessingCore extends Logger {
  */
 class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends ProcessingCore {
 
-  def getContentMapping(rbm_activity: DataFrame): DataFrame  = {
+  def getContentMapping(rbm_activity: DataFrame, ContentDescriptionMapping: DataFrame): DataFrame  = {
     // Select distinct activity_id and type pairs
     rbm_activity.select("activity_id", "type").distinct()
+      .join(ContentDescriptionMapping,
+        rbm_activity("type") === ContentDescriptionMapping("OriginalContent"),
+      "left")
+      .drop("type", "OriginalContent")
+      .withColumnRenamed("activity_id","ContentID")
   }
 
-  def getAgentMapping(rbm_activity: DataFrame, rbm_billable_events: DataFrame): DataFrame = {
+  def getAgentMapping(rbm_activity: DataFrame, rbm_billable_events: DataFrame, d_agent_owner: DataFrame): DataFrame = {
 
-    rbm_activity.select("agent_id")
+    //Get distinct agents from both sources
+    val distinctAgents = rbm_activity.select("agent_id")
       .union(rbm_billable_events.select("agent_id"))
-      .withColumn("Agent", split(col("agent_id"), "@").getItem(0))
-      .drop("agent_id")
       .distinct()
-      .withColumn("AgentID", row_number.over(Window.orderBy("Agent")))
+      .withColumn("AgentID", row_number.over(Window.orderBy("agent_id")))
+
+    // Get distinct list of Agents and Owners from the events file because only there we have events and owners
+    val agentsWithOwners = rbm_billable_events
+      .select("agent_id", "agent_owner")
+      .distinct()
+
+    //agentsWithOwners.show()
+    // Join to get AgentOwnerID
+    distinctAgents
+      .join(agentsWithOwners, distinctAgents("agent_id") === agentsWithOwners("agent_id"), "left")
+      .withColumn("Agent",split(distinctAgents("agent_id"), "@").getItem(0))
+      .withColumn("AgentOwner",split(col("agent_owner"), "@").getItem(0))
+      .join(d_agent_owner, split(col("agent_owner"), "@").getItem(0) === d_agent_owner("AgentOwner"), "left")
+      .select("AgentID", "AgentOwnerID", "Agent")
+      //
   }
 
   def getMessagesByType(rbm_activity: DataFrame, NatCoMapping: DataFrame,
@@ -62,9 +81,8 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
 
     // Create final MessagesByType fact by joining on Lookups to get the FKs
     activitiesGrouped_AllDirections
-      .join(ContentMapping, ContentMapping("type") === activitiesGrouped_AllDirections("type"), "left")
+      .join(ContentMapping, ContentMapping("Content") === activitiesGrouped_AllDirections("type"), "left")
       .join(AgentMapping, AgentMapping("Agent") === activitiesGrouped_AllDirections("Agent"), "left")
-      .withColumn("ContentID", col("activity_id"))
       //TODO: change this workaround to work with lookup table
       .withColumn("NatCoID",
         when(col("NatCo") === "mt", "1")
@@ -104,8 +122,6 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
         .withColumn("NoOfSM", when(col("Count").isNull, 0).otherwise(col("Count")))
         .drop("Count")
 
-    eventsMessageAllTypes.show()
-
     eventsMessageAllTypes
       .join(AgentMapping, AgentMapping("Agent") === eventsMessageAllTypes("Agent"), "left")
       //TODO: change this workaround to work with lookup table
@@ -117,7 +133,7 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
                 .otherwise("-1")))))
       //fix for a2p single messages which are not part of a conversation
       .withColumn("NoOfConv",
-        when(col("TypeOfSM") === "single_message" && col("NoOfConv").isNull, "0")
+        when(col("TypeOfSM") === "single_message" && col("TypeOfConv").isNull, 0)
           .otherwise(col("NoOfConv")))
       .select("Date", "NatCoID", "AgentID", "TypeOfConvID", /*"TypeOfConv",*/ "NoOfConv", /*"TypeOfSM",*/"NoOfSM")
 
@@ -156,42 +172,47 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
     eventsByConvAllTypes
   }
 
+  def getAgentOwners(rbm_billable_events: DataFrame):DataFrame = {
+    rbm_billable_events
+      .withColumn("AgentOwner", split(col("agent_owner"), "@").getItem(0))
+      .select("AgentOwner")
+      .distinct()
+      .withColumn("AgentOwnerID", row_number.over(Window.orderBy("AgentOwner")))
+      .select("AgentOwnerID", "AgentOwner") //Order columns
+  }
+
   /**
-   * The process class creates the output files as follows:
-   * NatCoMapping - static mapping coming from Stage layer
-   * ContentMapping - based on rbm_activity data
-   * AgentMapping - based on rbm_activity and rbm_billable_events data
-   * MessagesByType - based on rbm_activity data and lookups
-   * NoOfConvAndSM - based on rbm_billable_events data and lookups
-   * NoOfMessByTypeOfConv - based on rbm_billable_events data and lookups
+   * The process class creates the output files as dimensions and facts
    */
   override def process(preprocessedData: PreprocessedData): OutputData = {
     logger.info("Executing  processing core")
 
     val d_natco = preprocessedData.NatCoMapping
-    val d_conversation_type = preprocessedData.NatCoMapping
-    val d_content_type = getContentMapping(preprocessedData.rbm_activity)
-    val d_agent = getAgentMapping(preprocessedData.rbm_activity,preprocessedData.rbm_billable_events)
-
+    val d_conversation_type = preprocessedData.ConversationTypeMapping
+    val d_content_type = getContentMapping(preprocessedData.rbm_activity, preprocessedData.ContentDescriptionMapping)
+    val d_agent_owner = getAgentOwners(preprocessedData.rbm_billable_events)
+    val d_agent = getAgentMapping(preprocessedData.rbm_activity,
+      preprocessedData.rbm_billable_events,
+      d_agent_owner)
     val f_message_content = getMessagesByType(preprocessedData.rbm_activity,
       d_natco, /*Not actually used because of compilation bug. Used static mapping instead.*/
       d_content_type,
       d_agent)
-
     val f_message_conversation = getNoOfMessByTypeOfConv(preprocessedData.rbm_billable_events,
       d_natco, /*Not actually used because of compilation bug. Used static mapping instead.*/
       d_agent)
-
     val f_conversations_and_sm = getNoOfConvAndSM(preprocessedData.rbm_billable_events,
       d_natco, /*Not actually used because of compilation bug. Used static mapping instead.*/
       d_agent)
 
-    //NoOfConvAndSM.show()
+    //d_agent.show()
+    //d_agent_owner.show()
 
     OutputData(d_natco,
       d_content_type,
       d_conversation_type,
       d_agent,
+      d_agent_owner,
       f_message_content,
       f_conversations_and_sm,
       f_message_conversation)

@@ -1,0 +1,11 @@
+OriginalContent;Content
+text_message;Text message
+rich_card;Rich card
+rich_card_carousel;Rich card carousel
+file_transfer_image;File transfer image
+file_transfer_video;File transfer video
+suggested_reply_tap;Suggested reply tap
+suggested_action_tap;Suggested action tap
+delivery_receipt_event;Delivery receipt event
+read_receipt_event;Read receipt event
+spam_report;Spam report

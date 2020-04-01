@@ -13,13 +13,15 @@ class ResultWriter(resultPaths: ResultPaths) (implicit sparkSession: SparkSessio
   {
     /* Write output files*/
     logger.info("NOTE: ENABLE RESULT WRITER")
-    /*
-    CSVWriter(outputData.NatCoMapping, resultPaths.outputPath+"NatCoMapping.csv", delimiter = ";").writeData()
-    CSVWriter(outputData.ContentMapping, resultPaths.outputPath+"ContentMapping.csv", delimiter = ";").writeData()
-    CSVWriter(outputData.AgentMapping, resultPaths.outputPath+"AgentMapping.csv", delimiter = ";").writeData()
-    CSVWriter(outputData.MessagesByType, resultPaths.outputPath+"MessagesByType.csv", delimiter = ";").writeData()
-    CSVWriter(outputData.NoOfConvAndSM, resultPaths.outputPath+"NoOfConvAndSM.csv", delimiter = ";").writeData()
-    CSVWriter(outputData.NoOfMessByTypeOfConv, resultPaths.outputPath+"NoOfMessByTypeOfConv.csv", delimiter = ";").writeData()
-    */
+
+    CSVWriter(outputData.d_natco, resultPaths.outputPath+"d_natco.csv", delimiter = ";").writeData()
+    CSVWriter(outputData.d_content_type, resultPaths.outputPath+"d_content_type.csv", delimiter = ";").writeData()
+    CSVWriter(outputData.d_conversation_type, resultPaths.outputPath+"d_conversation_type.csv", delimiter = ";").writeData()
+    CSVWriter(outputData.d_agent, resultPaths.outputPath+"d_agent.csv", delimiter = ";").writeData()
+    CSVWriter(outputData.d_agent_owner, resultPaths.outputPath+"d_agent_owner.csv", delimiter = ";").writeData()
+    CSVWriter(outputData.f_message_content, resultPaths.outputPath+"f_message_content.csv", delimiter = ";").writeData()
+    CSVWriter(outputData.f_conversations_and_sm, resultPaths.outputPath+"f_conversations_and_sm.csv", delimiter = ";").writeData()
+    CSVWriter(outputData.f_message_conversation, resultPaths.outputPath+"f_message_conversation.csv", delimiter = ";").writeData()
+
   }
 }

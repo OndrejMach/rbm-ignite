@@ -60,7 +60,8 @@ object Processor extends App with Logger {
     file_date = "2019-01-25",
     file_natco_id = "mt",
     NatCoMapping =  new CSVReader("src/main/resources/inputData/NatCoMapping.csv", header = true, delimiter = ";"),
-    ConversationTypeMapping =  new CSVReader("src/main/resources/inputData/ConvTypeMapping.csv", header = true, delimiter = ";")
+    ConversationTypeMapping =  new CSVReader("src/main/resources/inputData/ConvTypeMapping.csv", header = true, delimiter = ";"),
+    ContentDescriptionMapping =  new CSVReader("src/main/resources/inputData/ContentDescriptionMapping.csv", header = true, delimiter = ";")
   )
 
   /**
