@@ -1,7 +1,7 @@
 package com.tmobile.sit.rbm.pipeline
 
 import com.tmobile.sit.common.Logger
-import org.apache.spark.sql.functions.{col, count, lit, row_number, split, sum, when}
+import org.apache.spark.sql.functions.{col, count, lit, row_number, split, sum, when,year,month, concat_ws, unix_timestamp}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.expressions.Window
 
@@ -181,6 +181,60 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
       .select("AgentOwnerID", "AgentOwner") //Order columns
   }
 
+  def getUAU(rbm_activity: DataFrame, d_natco: DataFrame):DataFrame = {
+
+    val rbm_acivity_YMD = rbm_activity
+      .withColumn("NatCoID",
+        when(col("NatCo") === "mt", "1")
+          .otherwise(when(col("NatCo") === "cg", "2")
+            .otherwise(when(col("NatCo") === "st", "3")
+              .otherwise(when(col("NatCo") === "cr", "4")
+                .otherwise("-1")))))
+      .withColumn("Date", split(col("time"), " ").getItem(0))
+      .withColumn("Year",year(col("time")))
+      .withColumn("Month",month(col("time")))
+      .withColumn("YearMonth", concat_ws("-",year(col("time")),month(col("time"))))
+      .select("Date", "Year","YearMonth", "Month", "NatCoID", "user_id")
+
+    val rbm_activity_daily = rbm_acivity_YMD
+      .select("Date", "YearMonth", "Year", "NatCoID", "user_id")
+      .groupBy("Date", "YearMonth", "Year", "NatCoID")
+      .agg(count("user_id").alias("UAU_daily"))
+      .withColumn("DateNatCo", concat_ws("|", col("Date"), col("NatCoID")))
+
+    val rbm_activity_monthly = rbm_acivity_YMD
+      .groupBy("YearMonth", "NatCoID")
+      .agg(count("user_id").alias("UAU_monthly"))
+
+    val rbm_activity_yearly = rbm_acivity_YMD
+      .groupBy("Year", "NatCoID")
+      .agg(count("user_id").alias("UAU_yearly"))
+
+    val rbm_activity_total = rbm_acivity_YMD
+      .groupBy("NatCoID")
+      .agg(count("user_id").alias("UAU_total"))
+
+    import sparkSession.implicits._
+
+    val rbm_activity_daily_final = rbm_activity_daily.as("d")
+        .join(rbm_activity_monthly.as("m"),
+          $"d.YearMonth" === $"m.YearMonth" &&
+          $"d.NatCoID" === $"m.NatCoID",
+          "leftouter")
+        .join(rbm_activity_yearly.as("y"),
+          $"d.Year" === $"y.Year" &&
+          $"d.NatCoID" === $"y.NatCoID",
+          "leftouter")
+      //TODO: fix something about this
+        .join(rbm_activity_total.as("t"),
+          $"d.NatCoID" === $"t.NatCoID",
+        "cross")
+        .select("DateNatCo", "UAU_daily", "UAU_monthly", "UAU_yearly", "UAU_total")
+
+
+    rbm_activity_daily_final
+    }
+
   /**
    * The process class creates the output files as dimensions and facts
    */
@@ -204,9 +258,11 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
     val f_conversations_and_sm = getNoOfConvAndSM(preprocessedData.rbm_billable_events,
       d_natco, /*Not actually used because of compilation bug. Used static mapping instead.*/
       d_agent)
+    val f_uau = getUAU(preprocessedData.rbm_activity, d_natco /*Not actually used. Used static mapping instead.*/)
 
     //d_agent.show()
     //d_agent_owner.show()
+    f_uau.show()
 
     OutputData(d_natco,
       d_content_type,

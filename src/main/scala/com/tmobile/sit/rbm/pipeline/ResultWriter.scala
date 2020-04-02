@@ -13,7 +13,7 @@ class ResultWriter(resultPaths: ResultPaths) (implicit sparkSession: SparkSessio
   {
     /* Write output files*/
     logger.info("NOTE: ENABLE RESULT WRITER")
-
+/*
     CSVWriter(outputData.d_natco, resultPaths.outputPath+"d_natco.csv", delimiter = ";").writeData()
     CSVWriter(outputData.d_content_type, resultPaths.outputPath+"d_content_type.csv", delimiter = ";").writeData()
     CSVWriter(outputData.d_conversation_type, resultPaths.outputPath+"d_conversation_type.csv", delimiter = ";").writeData()
@@ -22,6 +22,6 @@ class ResultWriter(resultPaths: ResultPaths) (implicit sparkSession: SparkSessio
     CSVWriter(outputData.f_message_content, resultPaths.outputPath+"f_message_content.csv", delimiter = ";").writeData()
     CSVWriter(outputData.f_conversations_and_sm, resultPaths.outputPath+"f_conversations_and_sm.csv", delimiter = ";").writeData()
     CSVWriter(outputData.f_message_conversation, resultPaths.outputPath+"f_message_conversation.csv", delimiter = ";").writeData()
-
+*/
   }
 }
