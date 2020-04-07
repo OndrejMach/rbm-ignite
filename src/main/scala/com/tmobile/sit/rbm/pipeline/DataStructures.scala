@@ -30,4 +30,5 @@ case class OutputData(d_natco: DataFrame,
                       d_agent_owner: DataFrame,
                       f_message_content: DataFrame,
                       f_conversations_and_sm: DataFrame,
-                      f_message_conversation: DataFrame)
+                      f_message_conversation: DataFrame,
+                      f_uau: DataFrame)

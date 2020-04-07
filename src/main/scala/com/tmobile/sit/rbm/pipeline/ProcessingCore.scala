@@ -1,7 +1,7 @@
 package com.tmobile.sit.rbm.pipeline
 
 import com.tmobile.sit.common.Logger
-import org.apache.spark.sql.functions.{col, count, lit, row_number, split, sum, when,year,month, concat_ws, unix_timestamp}
+import org.apache.spark.sql.functions.{col, count, lit, row_number, split, sum, when,year,month, concat_ws, average}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.expressions.Window
 
@@ -99,12 +99,12 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
                        d_agent: DataFrame):DataFrame = {
     // Count MT and MO messages per group
     val eventsByMessageType = rbm_billable_events
-      //TODO: Determine what date should be used here
       .withColumn("Date", split(col("FileDate"), " ").getItem(0))
       .withColumn("Agent", split(col("agent_id"), "@").getItem(0))
       .select("Date", "NatCo", "Agent", "type")
       .groupBy("Date", "NatCo", "Agent", "type")
-      .agg(count("type").alias("Count"))
+      .agg(count("type").alias("Count"),
+        average("duration").alias("AverageDuration"))
       .withColumn("TypeOfConvID",
         when(col("type") === "a2p_conversation", "1")
           .otherwise(when(col("type") === "p2a_conversation", "2")))
@@ -215,6 +215,8 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
       .agg(count("user_id").alias("UAU_total"))
 
     import sparkSession.implicits._
+    //TODO: The join with rbm_activity_total is seen as cross join so setting this property. Change it later!
+    sparkSession.conf.set("spark.sql.crossJoin.enabled", "true")
 
     val rbm_activity_daily_final = rbm_activity_daily.as("d")
         .join(rbm_activity_monthly.as("m"),
@@ -225,10 +227,9 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
           $"d.Year" === $"y.Year" &&
           $"d.NatCoID" === $"y.NatCoID",
           "leftouter")
-      //TODO: fix something about this
         .join(rbm_activity_total.as("t"),
           $"d.NatCoID" === $"t.NatCoID",
-        "cross")
+        "leftouter")
         .select("DateNatCo", "UAU_daily", "UAU_monthly", "UAU_yearly", "UAU_total")
 
 
@@ -262,7 +263,7 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
 
     //d_agent.show()
     //d_agent_owner.show()
-    f_uau.show()
+    //f_uau.show()
 
     OutputData(d_natco,
       d_content_type,
@@ -271,6 +272,7 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
       d_agent_owner,
       f_message_content,
       f_conversations_and_sm,
-      f_message_conversation)
+      f_message_conversation,
+      f_uau)
   }
 }
