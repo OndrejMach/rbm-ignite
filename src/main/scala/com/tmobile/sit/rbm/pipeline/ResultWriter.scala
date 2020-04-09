@@ -22,7 +22,7 @@ class ResultWriter(resultPaths: ResultPaths) (implicit sparkSession: SparkSessio
     CSVWriter(outputData.f_message_content, resultPaths.outputPath+"f_message_content.csv", delimiter = ";").writeData()
     CSVWriter(outputData.f_conversations_and_sm, resultPaths.outputPath+"f_conversations_and_sm.csv", delimiter = ";").writeData()
     CSVWriter(outputData.f_message_conversation, resultPaths.outputPath+"f_message_conversation.csv", delimiter = ";").writeData()
-    CSVWriter(outputData.f_uau, resultPaths.outputPath+"f_uau", delimiter = ";").writeData()
+    CSVWriter(outputData.f_uau, resultPaths.outputPath+"f_uau.csv", delimiter = ";").writeData()
 
 
   }
