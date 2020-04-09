@@ -1,7 +1,7 @@
 package com.tmobile.sit.rbm.pipeline
 
 import com.tmobile.sit.common.Logger
-import org.apache.spark.sql.functions.{col, count, lit, row_number, split, sum, when,year,month, concat_ws, average}
+import org.apache.spark.sql.functions.{col, count, lit, row_number, split, sum, when,year,month, concat_ws, avg}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.expressions.Window
 
@@ -97,17 +97,21 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
 
   def getNoOfConvAndSM(rbm_billable_events: DataFrame, d_natco: DataFrame,
                        d_agent: DataFrame):DataFrame = {
-    // Count MT and MO messages per group
+    // Count MT and MO messages per group (ap, pa, sm)
     val eventsByMessageType = rbm_billable_events
       .withColumn("Date", split(col("FileDate"), " ").getItem(0))
       .withColumn("Agent", split(col("agent_id"), "@").getItem(0))
-      .select("Date", "NatCo", "Agent", "type")
+      .select("Date", "NatCo", "Agent", "type", "duration")
       .groupBy("Date", "NatCo", "Agent", "type")
       .agg(count("type").alias("Count"),
-        average("duration").alias("AverageDuration"))
+        //TODO: finish average duration calculation
+        avg("duration").alias("AverageDuration"))
       .withColumn("TypeOfConvID",
         when(col("type") === "a2p_conversation", "1")
-          .otherwise(when(col("type") === "p2a_conversation", "2")))
+          .otherwise(when(col("type") === "p2a_conversation", "2")
+            .otherwise(when(col("type") === "single_message", "1"))))
+
+    //eventsByMessageType.show()
 
     val eventsMessageAllTypes = eventsByMessageType
         .filter(col("type") =!= "single_message")
@@ -115,12 +119,17 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
         .withColumnRenamed("type", "TypeOfConv")
         .join(eventsByMessageType
           .filter(col("type") === "single_message")
-          .withColumn("TypeOfConvID",lit("1"))
+          .withColumnRenamed("AverageDuration","AverageDurationSM")
           .withColumnRenamed("type", "TypeOfSM"),
         Seq("Date", "NatCo", "Agent", "TypeOfConvID"),
         "fullouter")
         .withColumn("NoOfSM", when(col("Count").isNull, 0).otherwise(col("Count")))
-        .drop("Count")
+        .withColumn("AverageDuration",
+          when(col("AverageDuration").isNull, col("AverageDurationSM"))
+            .otherwise(col("AverageDuration")))
+        .drop("Count", "AverageDurationSM")
+
+    //eventsMessageAllTypes.show()
 
     eventsMessageAllTypes
       .join(d_agent, d_agent("Agent") === eventsMessageAllTypes("Agent"), "left")
@@ -135,7 +144,7 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
       .withColumn("NoOfConv",
         when(col("TypeOfSM") === "single_message" && col("TypeOfConv").isNull, 0)
           .otherwise(col("NoOfConv")))
-      .select("Date", "NatCoID", "AgentID", "TypeOfConvID", /*"TypeOfConv",*/ "NoOfConv", /*"TypeOfSM",*/"NoOfSM")
+      .select("Date", "NatCoID", "AgentID", "TypeOfConvID", "AverageDuration", "NoOfConv", /*"TypeOfSM",*/"NoOfSM")
 
   }
 
@@ -262,7 +271,7 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
     val f_uau = getUAU(preprocessedData.rbm_activity, d_natco /*Not actually used. Used static mapping instead.*/)
 
     //d_agent.show()
-    //d_agent_owner.show()
+    //f_conversations_and_sm.show()
     //f_uau.show()
 
     OutputData(d_natco,
