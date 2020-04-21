@@ -3,7 +3,7 @@ package com.tmobile.sit.rbm
 import com.tmobile.sit.common.Logger
 import com.tmobile.sit.common.readers.CSVReader
 import com.tmobile.sit.rbm.config.Setup
-import com.tmobile.sit.rbm.pipeline.{CoreLogicWithTransform, InputData, Pipeline, ResultPaths, ResultWriter, Stage}
+import com.tmobile.sit.rbm.pipeline.{CoreLogicWithTransform, FileMetaData, InputData, MappingData, Pipeline, ResultPaths, ResultWriter, Stage}
 import org.apache.spark.sql.SparkSession
 
 
@@ -56,9 +56,15 @@ object Processor extends App with Logger {
    */
   val inputReaders = InputData(
     rbm_activity = new CSVReader(conf.settings.inputPath.get + "rbm_activity_*_mt.csv", header = true, delimiter = ";"),
-    rbm_billable_events = new CSVReader(conf.settings.inputPath.get + "rbm_billable_events_*_mt.csv", header = true, delimiter = ";"),
+    rbm_billable_events = new CSVReader(conf.settings.inputPath.get + "rbm_billable_events_*_mt.csv", header = true, delimiter = ";")
+  )
+
+  val fileMetaData = FileMetaData(
     file_date = "2019-01-25",
-    file_natco_id = "mt",
+    file_natco_id = "mt"
+  )
+
+  val mappingReaders = MappingData(
     NatCoMapping =  new CSVReader("src/main/resources/inputData/NatCoMapping.csv", header = true, delimiter = ";"),
     ConversationTypeMapping =  new CSVReader("src/main/resources/inputData/ConvTypeMapping.csv", header = true, delimiter = ";"),
     ContentDescriptionMapping =  new CSVReader("src/main/resources/inputData/ContentDescriptionMapping.csv", header = true, delimiter = ";")
@@ -83,7 +89,7 @@ object Processor extends App with Logger {
    * Creating a pipeline where all the steps are executed in the desired order. Processing steps classes
    * are passed as class parameters.
    */
-  val pipeline = new Pipeline(inputReaders,stage,processingCore,resultWriter)
+  val pipeline = new Pipeline(inputReaders,mappingReaders,fileMetaData,stage,processingCore,resultWriter)
 
 
   /**

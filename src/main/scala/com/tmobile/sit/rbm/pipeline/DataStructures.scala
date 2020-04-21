@@ -8,12 +8,14 @@ import org.apache.spark.sql.DataFrame
  * */
 
 case class InputData(rbm_activity: Reader,
-                     rbm_billable_events: Reader,
-                     NatCoMapping: Reader,
-                     ConversationTypeMapping: Reader,
-                     ContentDescriptionMapping: Reader,
-                     file_natco_id: String,
-                     file_date: String)
+                     rbm_billable_events: Reader)
+
+case class MappingData(NatCoMapping: Reader,
+                       ConversationTypeMapping: Reader,
+                       ContentDescriptionMapping: Reader)
+
+case class FileMetaData(file_natco_id: String,
+                        file_date: String)
 
 case class PreprocessedData(rbm_activity: DataFrame,
                             rbm_billable_events: DataFrame,

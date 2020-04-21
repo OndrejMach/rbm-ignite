@@ -12,8 +12,8 @@ trait StageProcessing extends Logger{
   def preprocessActivity(input: DataFrame, file_natco_id: String) : DataFrame
   def preprocessEvents(input: DataFrame, file_natco_id: String, file_date: String) : DataFrame
   def preprocessNatCoMapping(input: DataFrame) : DataFrame
-  def  preprocessConversationTypeMapping(input: DataFrame) : DataFrame
-  def  preprocessContentDescriptionMapping(input: DataFrame) : DataFrame
+  def preprocessConversationTypeMapping(input: DataFrame) : DataFrame
+  def preprocessContentDescriptionMapping(input: DataFrame) : DataFrame
 }
 
 /**
@@ -27,16 +27,10 @@ class Stage  (implicit sparkSession: SparkSession) extends StageProcessing {
    * @return - people data tuned and preprocessed.
    */
 
-
   override def preprocessActivity(rbmActivity: DataFrame, file_natco_id: String): DataFrame = {
     rbmActivity.withColumn("NatCo", lit(file_natco_id))
   }
 
-  /**
-   * Preprocessing of the salaryInfo data. Selects only two columns needed and adds one more 'isValid' with a default value 'true'
-   * @param rbmEvents - input salaryInfo table from csv.
-   * @return - preprocessed data as DataFrame.
-   */
   override def preprocessEvents(rbmEvents: DataFrame, file_natco_id: String, file_date: String) : DataFrame = {
     rbmEvents.withColumn("NatCo", lit(file_natco_id))
       .withColumn("FileDate", lit(file_date))

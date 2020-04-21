@@ -1,7 +1,7 @@
 package com.tmobile.sit.rbm.pipeline
 
 import com.tmobile.sit.common.Logger
-import org.apache.spark.sql.functions.{col, count, lit, row_number, split, sum, when,year,month, concat_ws, avg}
+import org.apache.spark.sql.functions.{col, count, countDistinct, row_number, split, sum, when,year,month, concat_ws, avg}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.expressions.Window
 
@@ -26,7 +26,7 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
       .join(ContentDescriptionMapping,
         rbm_activity("type") === ContentDescriptionMapping("OriginalContent"),
       "left")
-      .drop("type", "OriginalContent")
+      .drop("type")
       .withColumnRenamed("activity_id","ContentID")
   }
 
@@ -81,7 +81,7 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
 
     // Create final MessagesByType fact by joining on Lookups to get the FKs
     activitiesGrouped_AllDirections
-      .join(d_content_type, d_content_type("Content") === activitiesGrouped_AllDirections("type"), "left")
+      .join(d_content_type, d_content_type("OriginalContent") === activitiesGrouped_AllDirections("type"), "left")
       .join(d_agent, d_agent("Agent") === activitiesGrouped_AllDirections("Agent"), "left")
       //TODO: change this workaround to work with lookup table
       .withColumn("NatCoID",
@@ -104,7 +104,6 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
       .select("Date", "NatCo", "Agent", "type", "duration")
       .groupBy("Date", "NatCo", "Agent", "type")
       .agg(count("type").alias("Count"),
-        //TODO: finish average duration calculation
         avg("duration").alias("AverageDuration"))
       .withColumn("TypeOfConvID",
         when(col("type") === "a2p_conversation", "1")
@@ -192,6 +191,8 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
 
   def getUAU(rbm_activity: DataFrame, d_natco: DataFrame):DataFrame = {
 
+    import sparkSession.implicits._
+
     val rbm_acivity_YMD = rbm_activity
       .withColumn("NatCoID",
         when(col("NatCo") === "mt", "1")
@@ -208,24 +209,19 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
     val rbm_activity_daily = rbm_acivity_YMD
       .select("Date", "YearMonth", "Year", "NatCoID", "user_id")
       .groupBy("Date", "YearMonth", "Year", "NatCoID")
-      .agg(count("user_id").alias("UAU_daily"))
-      .withColumn("DateNatCo", concat_ws("|", col("Date"), col("NatCoID")))
+      .agg(countDistinct("user_id").alias("UAU_daily"))
 
     val rbm_activity_monthly = rbm_acivity_YMD
       .groupBy("YearMonth", "NatCoID")
-      .agg(count("user_id").alias("UAU_monthly"))
+      .agg(countDistinct("user_id").alias("UAU_monthly"))
 
     val rbm_activity_yearly = rbm_acivity_YMD
       .groupBy("Year", "NatCoID")
-      .agg(count("user_id").alias("UAU_yearly"))
+      .agg(countDistinct("user_id").alias("UAU_yearly"))
 
     val rbm_activity_total = rbm_acivity_YMD
       .groupBy("NatCoID")
-      .agg(count("user_id").alias("UAU_total"))
-
-    import sparkSession.implicits._
-    //TODO: The join with rbm_activity_total is seen as cross join so setting this property. Change it later!
-    sparkSession.conf.set("spark.sql.crossJoin.enabled", "true")
+      .agg(countDistinct("user_id").alias("UAU_total"))
 
     val rbm_activity_daily_final = rbm_activity_daily.as("d")
         .join(rbm_activity_monthly.as("m"),
@@ -239,8 +235,7 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
         .join(rbm_activity_total.as("t"),
           $"d.NatCoID" === $"t.NatCoID",
         "leftouter")
-        .select("DateNatCo", "UAU_daily", "UAU_monthly", "UAU_yearly", "UAU_total")
-
+        .select("Date", "d.NatCoID","UAU_daily", "UAU_monthly", "UAU_yearly", "UAU_total")
 
     rbm_activity_daily_final
     }
@@ -250,6 +245,9 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
    */
   override def process(preprocessedData: PreprocessedData): OutputData = {
     logger.info("Executing  processing core")
+
+    //TODO: Some joins like with rbm_activity_total or with d_natco are seen as cross joins. Can this be avoided?
+    sparkSession.conf.set("spark.sql.crossJoin.enabled", "true")
 
     val d_natco = preprocessedData.NatCoMapping
     val d_conversation_type = preprocessedData.ConversationTypeMapping
@@ -271,7 +269,7 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
     val f_uau = getUAU(preprocessedData.rbm_activity, d_natco /*Not actually used. Used static mapping instead.*/)
 
     //d_agent.show()
-    //f_conversations_and_sm.show()
+    //f_message_content.show()
     //f_uau.show()
 
     OutputData(d_natco,
