@@ -77,7 +77,7 @@ object Processor extends App with Logger {
 
   val resultPaths = ResultPaths(conf.settings.lookupPath.get, conf.settings.outputPath.get)
 
-  val resultWriter = new ResultWriter(resultPaths)
+  val resultWriter = new ResultWriter(resultPaths, fileMetaData)
 
   val pipeline = new Pipeline(inputReaders,mappingReaders,fileMetaData,stage,processingCore,resultWriter)
 

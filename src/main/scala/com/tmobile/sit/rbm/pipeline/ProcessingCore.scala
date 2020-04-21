@@ -92,7 +92,6 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
               .otherwise("-1")))))
       .drop("Agent", "type","NatCo", "activity_id")
       .select("Date", "NatCoID", "ContentID", "AgentID", "MT_MessagesByType", "MO_MessagesByType", "MTMO_MessagesByType")
-
   }
 
   def getNoOfConvAndSM(rbm_billable_events: DataFrame, d_natco: DataFrame,
