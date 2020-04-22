@@ -191,7 +191,7 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
   def getUAU(rbm_activity: DataFrame, d_natco: DataFrame):DataFrame = {
 
     import sparkSession.implicits._
-
+    //TODO: fix for this
     val rbm_acivity_YMD = rbm_activity
       .withColumn("NatCoID",
         when(col("NatCo") === "mt", "1")
@@ -255,6 +255,7 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
     val d_agent = getAgentMapping(preprocessedData.rbm_activity,
       preprocessedData.rbm_billable_events,
       d_agent_owner)
+
     val f_message_content = getMessagesByType(preprocessedData.rbm_activity,
       d_natco, /*Not actually used because of compilation bug. Used static mapping instead.*/
       d_content_type,
