@@ -1,4 +1,4 @@
-package com.tmobile.sit.rbm.pipeline.Core
+package com.tmobile.sit.rbm.pipeline.core
 
 import com.tmobile.sit.common.Logger
 import org.apache.spark.sql.expressions.Window
@@ -10,12 +10,11 @@ import org.apache.spark.sql.functions.{lit, row_number}
  */
 
 trait SCDProcessing extends Logger{
-  def processD_AgentOwner(old_d_agent_owner: DataFrame, new_d_agent_owner: DataFrame) : DataFrame
-  def processD_Agent(old_d_agent: DataFrame, new_d_agent: DataFrame) : DataFrame
-  def processD_ContentType(old_d_content_type: DataFrame, new_d_content_type: DataFrame) : DataFrame
+  def handle_D_Agent_Owner(old_d_agent_owner: DataFrame, new_d_agent_owner: DataFrame) : DataFrame
+  def handle_D_Agent(old_d_agent: DataFrame, new_d_agent: DataFrame) : DataFrame
+  def handle_D_Content_Type(old_d_content_type: DataFrame, new_d_content_type: DataFrame) : DataFrame
 
   //todo: implement generic method
-  def processSCD(old_dimension: DataFrame, new_dimension: DataFrame): DataFrame
 }
 
 /**
@@ -24,7 +23,7 @@ trait SCDProcessing extends Logger{
 class SCDHandler(implicit sparkSession: SparkSession) extends SCDProcessing {
   import sparkSession.sqlContext.implicits._
 
-  override def processD_AgentOwner(old_d_agent_owner: DataFrame, new_d_agent_owner: DataFrame): DataFrame = {
+  override def handle_D_Agent_Owner(old_d_agent_owner: DataFrame, new_d_agent_owner: DataFrame): DataFrame = {
     old_d_agent_owner
     .withColumn("Order",lit("1"))
     .union(
@@ -41,7 +40,7 @@ class SCDHandler(implicit sparkSession: SparkSession) extends SCDProcessing {
     .withColumn("AgentOwnerID", row_number.over(Window.orderBy("merged.Order")))
     .select("AgentOwnerID","AgentOwner")
   }
-  override def processD_Agent(old_d_agent: DataFrame, new_d_agent: DataFrame): DataFrame = {
+  override def handle_D_Agent(old_d_agent: DataFrame, new_d_agent: DataFrame): DataFrame = {
     old_d_agent
       .withColumn("Order",lit("1"))
       .union(
@@ -58,7 +57,7 @@ class SCDHandler(implicit sparkSession: SparkSession) extends SCDProcessing {
       .withColumn("AgentID", row_number.over(Window.orderBy("merged.Order")))
       .select("AgentID","AgentOwnerID", "Agent")
   }
-  override def processD_ContentType(old_d_content_type: DataFrame, new_d_content_type: DataFrame): DataFrame = {
+  override def handle_D_Content_Type(old_d_content_type: DataFrame, new_d_content_type: DataFrame): DataFrame = {
     old_d_content_type
      .union(
         new_d_content_type
@@ -72,8 +71,5 @@ class SCDHandler(implicit sparkSession: SparkSession) extends SCDProcessing {
       )
       .as("merged")
       .select("ContentID","OriginalContent", "Content")
-  }
-  override def processSCD(old_dimension: DataFrame, new_dimension: DataFrame): DataFrame = {
-    old_dimension
   }
 }

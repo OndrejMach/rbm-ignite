@@ -1,4 +1,4 @@
-package com.tmobile.sit.rbm.pipeline.Core
+package com.tmobile.sit.rbm.pipeline.core
 
 import com.tmobile.sit.common.Logger
 import org.apache.spark.sql.expressions.Window
