@@ -28,10 +28,7 @@ class Dimension(implicit sparkSession: SparkSession) extends DimensionProcessing
       .distinct()
       .withColumn("AgentOwnerID", row_number.over(Window.orderBy("AgentOwner")))
       .select("AgentOwnerID", "AgentOwner") //Order columns
-    .as("merged")
-    .withColumn("AgentOwnerID", row_number.over(Window.orderBy("merged.Order")))
-    .select("AgentOwnerID","AgentOwner")
-  }
+}
 
   override def process_D_Agent(rbm_activity: DataFrame, rbm_billable_events: DataFrame, d_agent_owner: DataFrame): DataFrame = {
 

@@ -29,7 +29,7 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
 
     //TODO: Find workaround for false crossJoin detection besides enabling crosJoin in spark
     sparkSession.conf.set("spark.sql.crossJoin.enabled", "true")
-    val scdHandler = new SCDHandler()
+    val handleSCD = new SCDHandler()
     val dimensionProcessor = new Dimension()
     val factProcessor = new Fact()
 
@@ -42,16 +42,16 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
     val old_d_agent_owner = persistentData.d_agent_owner
     val new_d_agent_owner = dimensionProcessor.process_D_Agent_Owner(preprocessedData.rbm_billable_events)
 
-    val d_agent_owner = scdHandler.processD_AgentOwner(old_d_agent_owner, new_d_agent_owner)
+    val d_agent_owner = handleSCD.processD_AgentOwner(old_d_agent_owner, new_d_agent_owner)
     //**********************
     val new_d_agent = dimensionProcessor.process_D_Agent(preprocessedData.rbm_activity,preprocessedData.rbm_billable_events,d_agent_owner)
     val old_d_agent = persistentData.d_agent
 
-    val d_agent = scdHandler.processD_Agent(old_d_agent, new_d_agent)
+    val d_agent = handleSCD.processD_Agent(old_d_agent, new_d_agent)
     //**********************
     val new_d_content_type = dimensionProcessor.process_D_Content_Type(preprocessedData.rbm_activity, preprocessedData.ContentDescriptionMapping)
     val old_d_content_type = persistentData.d_content_type
-    val d_content_type = scdHandler.processD_ContentType(old_d_content_type, new_d_content_type)
+    val d_content_type = handleSCD.processD_ContentType(old_d_content_type, new_d_content_type)
 
     // Daily fact tables, always overwrite suffixed with date and natco
     val f_message_content = factProcessor.process_F_Message_Content(preprocessedData.rbm_activity,
