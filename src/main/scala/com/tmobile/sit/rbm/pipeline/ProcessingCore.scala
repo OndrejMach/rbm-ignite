@@ -1,7 +1,7 @@
 package com.tmobile.sit.rbm.pipeline
 
 import com.tmobile.sit.common.Logger
-import com.tmobile.sit.rbm.pipeline.Core.{ProcessSCD, SCDProcessing}
+import com.tmobile.sit.rbm.pipeline.Core.{HandleSCD, SCDProcessing}
 import org.apache.spark.sql.functions.{avg, col, concat_ws, count, countDistinct, lit, month, regexp_replace, row_number, split, sum, when, year}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.expressions.Window
@@ -249,7 +249,7 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
 
     //TODO: Some joins like with rbm_activity_total or with d_natco are seen as cross joins. Can this be avoided?
     sparkSession.conf.set("spark.sql.crossJoin.enabled", "true")
-    val processSCD = new ProcessSCD()
+    val handleSCD = new HandleSCD()
 
     // Static dimension mapping, always overwrite
     val d_natco = preprocessedData.NatCoMapping
@@ -260,16 +260,16 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
     val old_d_agent_owner = persistentData.d_agent_owner
     val new_d_agent_owner = process_D_Agent_Owner(preprocessedData.rbm_billable_events)
 
-    val d_agent_owner = processSCD.processD_AgentOwner(old_d_agent_owner, new_d_agent_owner)
+    val d_agent_owner = handleSCD.processD_AgentOwner(old_d_agent_owner, new_d_agent_owner)
     //**********************
     val new_d_agent = process_D_Agent(preprocessedData.rbm_activity,preprocessedData.rbm_billable_events,d_agent_owner)
     val old_d_agent = persistentData.d_agent
 
-    val d_agent = processSCD.processD_Agent(old_d_agent, new_d_agent)
+    val d_agent = handleSCD.processD_Agent(old_d_agent, new_d_agent)
     //**********************
     val new_d_content_type = process_D_Content_Type(preprocessedData.rbm_activity, preprocessedData.ContentDescriptionMapping)
     val old_d_content_type = persistentData.d_content_type
-    val d_content_type = processSCD.processD_ContentType(old_d_content_type, new_d_content_type)
+    val d_content_type = handleSCD.processD_ContentType(old_d_content_type, new_d_content_type)
 
     // Daily fact tables, always overwrite suffixed with date
     val f_message_content = process_F_Message_Content(preprocessedData.rbm_activity,
