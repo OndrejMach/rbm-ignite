@@ -21,7 +21,7 @@ trait SCDProcessing extends Logger{
 /**
  * Preprocessing implementation, two methods - one for people table preprocessing and one for salaryInfo preprocessing.
  */
-class HandleSCD(implicit sparkSession: SparkSession) extends SCDProcessing {
+class SCDHandler(implicit sparkSession: SparkSession) extends SCDProcessing {
   import sparkSession.sqlContext.implicits._
 
   override def processD_AgentOwner(old_d_agent_owner: DataFrame, new_d_agent_owner: DataFrame): DataFrame = {
