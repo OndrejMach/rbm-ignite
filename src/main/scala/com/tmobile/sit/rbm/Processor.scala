@@ -3,7 +3,7 @@ package com.tmobile.sit.rbm
 import com.tmobile.sit.common.Logger
 import com.tmobile.sit.common.readers.CSVReader
 import com.tmobile.sit.rbm.config.Setup
-import com.tmobile.sit.rbm.pipeline.{CoreLogicWithTransform, FileMetaData, InputData, MappingData, Pipeline, ResultPaths, ResultWriter, Stage}
+import com.tmobile.sit.rbm.pipeline.{CoreLogicWithTransform, FileMetaData, InputData, MappingData, PersistentData, Pipeline, ResultPaths, ResultWriter, Stage}
 import org.apache.spark.sql.SparkSession
 
 
@@ -71,6 +71,12 @@ object Processor extends App with Logger {
     ContentDescriptionMapping =  new CSVReader("src/main/resources/inputData/ContentDescriptionMapping.csv", header = true, delimiter = ";")
   )
 
+  val persistentData = PersistentData(
+    d_agent_owner = new CSVReader(conf.settings.outputPath.get + "d_agent_owner.csv", header = true, delimiter = ";").read(),
+    d_agent = new CSVReader(conf.settings.outputPath.get + "d_agent.csv", header = true, delimiter = ";").read(),
+    d_content_type = new CSVReader(conf.settings.outputPath.get + "d_content_type.csv", header = true, delimiter = ";").read()
+  )
+
   val stage = new Stage()
 
   val processingCore = new CoreLogicWithTransform()
@@ -79,7 +85,7 @@ object Processor extends App with Logger {
 
   val resultWriter = new ResultWriter(resultPaths, fileMetaData)
 
-  val pipeline = new Pipeline(inputReaders,mappingReaders,fileMetaData,stage,processingCore,resultWriter)
+  val pipeline = new Pipeline(inputReaders,mappingReaders,fileMetaData,persistentData,stage,processingCore,resultWriter)
 
   pipeline.run()
 

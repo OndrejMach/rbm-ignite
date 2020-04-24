@@ -9,7 +9,7 @@ package com.tmobile.sit.rbm.pipeline
  */
 
 class Pipeline(inputData: InputData, mappingData: MappingData, fileMetaData: FileMetaData,
-               stage: StageProcessing, core: ProcessingCore, writer: ResultWriter) {
+               persistentData: PersistentData, stage: StageProcessing, core: ProcessingCore, writer: ResultWriter) {
   def run(): Unit = {
 
     val preprocessedData =
@@ -21,7 +21,7 @@ class Pipeline(inputData: InputData, mappingData: MappingData, fileMetaData: Fil
         stage.preprocessContentDescriptionMapping(mappingData.ContentDescriptionMapping.read())
       )
 
-    val result = core.process(preprocessedData)
+    val result = core.process(preprocessedData, persistentData)
 
     writer.write(result)
   }

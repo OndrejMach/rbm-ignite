@@ -1,7 +1,8 @@
 package com.tmobile.sit.rbm.pipeline
 
 import com.tmobile.sit.common.Logger
-import org.apache.spark.sql.functions.{col, count, countDistinct, row_number, split, sum, when,year,month, concat_ws, avg}
+import com.tmobile.sit.rbm.pipeline.Core.{ProcessSCD, SCDProcessing}
+import org.apache.spark.sql.functions.{avg, col, concat_ws, count, countDistinct, lit, month, regexp_replace, row_number, split, sum, when, year}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.expressions.Window
 
@@ -11,7 +12,7 @@ import org.apache.spark.sql.expressions.Window
  */
 
 trait ProcessingCore extends Logger {
-  def process(preprocessedData: PreprocessedData) : OutputData
+  def process(preprocessedData: PreprocessedData, persistentData: PersistentData) : OutputData
 }
 
 /**
@@ -20,7 +21,7 @@ trait ProcessingCore extends Logger {
  */
 class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends ProcessingCore {
 
-  def getContentMapping(rbm_activity: DataFrame, ContentDescriptionMapping: DataFrame): DataFrame  = {
+  def process_D_Content_Type(rbm_activity: DataFrame, ContentDescriptionMapping: DataFrame): DataFrame  = {
     // Select distinct activity_id and type pairs
     rbm_activity.select("activity_id", "type").distinct()
       .join(ContentDescriptionMapping,
@@ -30,7 +31,7 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
       .withColumnRenamed("activity_id","ContentID")
   }
 
-  def getAgentMapping(rbm_activity: DataFrame, rbm_billable_events: DataFrame, d_agent_owner: DataFrame): DataFrame = {
+  def process_D_Agent(rbm_activity: DataFrame, rbm_billable_events: DataFrame, d_agent_owner: DataFrame): DataFrame = {
 
     //Get distinct agents from both sources
     val distinctAgents = rbm_activity.select("agent_id")
@@ -54,8 +55,8 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
       //
   }
 
-  def getMessagesByType(rbm_activity: DataFrame, d_natco: DataFrame,
-                        d_content_type: DataFrame, d_agent: DataFrame): DataFrame = {
+  def process_F_Message_Content(rbm_activity: DataFrame, d_natco: DataFrame,
+                                d_content_type: DataFrame, d_agent: DataFrame): DataFrame = {
     // Count MT and MO messages per group
      val activityGroupedByDirection = rbm_activity
       .withColumn("Date", split(col("time"), " ").getItem(0))
@@ -94,8 +95,8 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
       .select("Date", "NatCoID", "ContentID", "AgentID", "MT_MessagesByType", "MO_MessagesByType", "MTMO_MessagesByType")
   }
 
-  def getNoOfConvAndSM(rbm_billable_events: DataFrame, d_natco: DataFrame,
-                       d_agent: DataFrame):DataFrame = {
+  def process_F_Conversation_And_SM(rbm_billable_events: DataFrame, d_natco: DataFrame,
+                                    d_agent: DataFrame):DataFrame = {
     // Count MT and MO messages per group (ap, pa, sm)
     val eventsByMessageType = rbm_billable_events
       .withColumn("Date", split(col("FileDate"), " ").getItem(0))
@@ -142,13 +143,14 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
       .withColumn("NoOfConv",
         when(col("TypeOfSM") === "single_message" && col("TypeOfConv").isNull, 0)
           .otherwise(col("NoOfConv")))
+      .withColumn("AverageDuration", regexp_replace(col("AverageDuration"), lit("\\."), lit(",")))
       .select("Date", "NatCoID", "AgentID", "TypeOfConvID", "AverageDuration", "NoOfConv", /*"TypeOfSM",*/"NoOfSM")
 
   }
 
-  def getNoOfMessByTypeOfConv(rbm_billable_events: DataFrame,
-                              d_natco: DataFrame,
-                              d_agent: DataFrame):DataFrame = {
+  def process_F_Message_Conversation(rbm_billable_events: DataFrame,
+                                     d_natco: DataFrame,
+                                     d_agent: DataFrame):DataFrame = {
 
     val eventsByConvType = rbm_billable_events
       //TODO: Determine what date should be used here
@@ -179,7 +181,7 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
     eventsByConvAllTypes
   }
 
-  def getAgentOwners(rbm_billable_events: DataFrame):DataFrame = {
+  def process_D_Agent_Owner(rbm_billable_events: DataFrame):DataFrame = {
     rbm_billable_events
       .withColumn("AgentOwner", split(col("agent_owner"), "@").getItem(0))
       .select("AgentOwner")
@@ -188,7 +190,7 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
       .select("AgentOwnerID", "AgentOwner") //Order columns
   }
 
-  def getUAU(rbm_activity: DataFrame, d_natco: DataFrame):DataFrame = {
+  def process_F_UAU(rbm_activity: DataFrame, d_natco: DataFrame):DataFrame = {
 
     import sparkSession.implicits._
     //TODO: fix for this
@@ -242,31 +244,45 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
   /**
    * The process class creates the output files as dimensions and facts
    */
-  override def process(preprocessedData: PreprocessedData): OutputData = {
+  override def process(preprocessedData: PreprocessedData, persistentData: PersistentData): OutputData = {
     logger.info("Executing  processing core")
 
     //TODO: Some joins like with rbm_activity_total or with d_natco are seen as cross joins. Can this be avoided?
     sparkSession.conf.set("spark.sql.crossJoin.enabled", "true")
+    val processSCD = new ProcessSCD()
 
+    // Static dimension mapping, always overwrite
     val d_natco = preprocessedData.NatCoMapping
     val d_conversation_type = preprocessedData.ConversationTypeMapping
-    val d_content_type = getContentMapping(preprocessedData.rbm_activity, preprocessedData.ContentDescriptionMapping)
-    val d_agent_owner = getAgentOwners(preprocessedData.rbm_billable_events)
-    val d_agent = getAgentMapping(preprocessedData.rbm_activity,
-      preprocessedData.rbm_billable_events,
-      d_agent_owner)
 
-    val f_message_content = getMessagesByType(preprocessedData.rbm_activity,
+    // Slowly changing dimensions TODO: Implement
+    //**********************
+    val old_d_agent_owner = persistentData.d_agent_owner
+    val new_d_agent_owner = process_D_Agent_Owner(preprocessedData.rbm_billable_events)
+
+    val d_agent_owner = processSCD.processD_AgentOwner(old_d_agent_owner, new_d_agent_owner)
+    //**********************
+    val new_d_agent = process_D_Agent(preprocessedData.rbm_activity,preprocessedData.rbm_billable_events,d_agent_owner)
+    val old_d_agent = persistentData.d_agent
+
+    val d_agent = processSCD.processD_Agent(old_d_agent, new_d_agent)
+    //**********************
+    val new_d_content_type = process_D_Content_Type(preprocessedData.rbm_activity, preprocessedData.ContentDescriptionMapping)
+    val old_d_content_type = persistentData.d_content_type
+    val d_content_type = processSCD.processD_ContentType(old_d_content_type, new_d_content_type)
+
+    // Daily fact tables, always overwrite suffixed with date
+    val f_message_content = process_F_Message_Content(preprocessedData.rbm_activity,
       d_natco, /*Not actually used because of compilation bug. Used static mapping instead.*/
       d_content_type,
       d_agent)
-    val f_message_conversation = getNoOfMessByTypeOfConv(preprocessedData.rbm_billable_events,
+    val f_message_conversation = process_F_Message_Conversation(preprocessedData.rbm_billable_events,
       d_natco, /*Not actually used because of compilation bug. Used static mapping instead.*/
       d_agent)
-    val f_conversations_and_sm = getNoOfConvAndSM(preprocessedData.rbm_billable_events,
+    val f_conversations_and_sm = process_F_Conversation_And_SM(preprocessedData.rbm_billable_events,
       d_natco, /*Not actually used because of compilation bug. Used static mapping instead.*/
       d_agent)
-    val f_uau = getUAU(preprocessedData.rbm_activity, d_natco /*Not actually used. Used static mapping instead.*/)
+    val f_uau = process_F_UAU(preprocessedData.rbm_activity, d_natco /*Not actually used. Used static mapping instead.*/)
 
     //d_agent.show()
     //f_message_content.show()

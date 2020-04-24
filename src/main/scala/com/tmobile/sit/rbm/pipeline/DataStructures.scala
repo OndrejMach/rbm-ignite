@@ -18,7 +18,8 @@ case class FileMetaData(file_natco_id: String,
                         file_date: String)
 
 case class PersistentData(d_agent: DataFrame,
-                          d_agent_owner: DataFrame)
+                          d_agent_owner: DataFrame,
+                          d_content_type: DataFrame)
 
 case class PreprocessedData(rbm_activity: DataFrame,
                             rbm_billable_events: DataFrame,
