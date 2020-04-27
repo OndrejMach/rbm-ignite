@@ -13,8 +13,7 @@ trait ProcessingCore extends Logger {
 }
 
 /**
- * This class implements core of the processing, for each important processing steps there is a method (two here for join and final aggregation).
- * This split should help with readability and structure. Core of the processing is method process which is basically ran first.
+ * This class implements the core processing method which creates and updates dimensional data
  */
 class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends ProcessingCore {
 

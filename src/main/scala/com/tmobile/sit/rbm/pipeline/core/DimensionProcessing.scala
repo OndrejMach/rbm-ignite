@@ -19,7 +19,6 @@ trait DimensionProcessing extends Logger{
  * Preprocessing implementation, two methods - one for people table preprocessing and one for salaryInfo preprocessing.
  */
 class Dimension(implicit sparkSession: SparkSession) extends DimensionProcessing {
-  import sparkSession.sqlContext.implicits._
 
   override def process_D_Agent_Owner(rbm_billable_events: DataFrame):DataFrame = {
     rbm_billable_events
