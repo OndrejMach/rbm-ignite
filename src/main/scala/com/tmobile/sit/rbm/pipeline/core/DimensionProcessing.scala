@@ -5,19 +5,12 @@ import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions.{col, lit, row_number, split}
 
-/**
- * A trait defining preprocessing of the input data. There are two method for preprocessing of each data source.
- */
-
 trait DimensionProcessing extends Logger{
   def process_D_Agent_Owner(rbm_billable_events: DataFrame):DataFrame
   def process_D_Agent(rbm_activity: DataFrame, rbm_billable_events: DataFrame, d_agent_owner: DataFrame): DataFrame
   def process_D_Content_Type(rbm_activity: DataFrame, ContentDescriptionMapping: DataFrame): DataFrame
 }
 
-/**
- * Preprocessing implementation, two methods - one for people table preprocessing and one for salaryInfo preprocessing.
- */
 class Dimension(implicit sparkSession: SparkSession) extends DimensionProcessing {
 
   override def process_D_Agent_Owner(rbm_billable_events: DataFrame):DataFrame = {

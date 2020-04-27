@@ -5,17 +5,12 @@ import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions.{avg, col, concat_ws, count, countDistinct, lit, month, regexp_replace, row_number, split, sum, when, year}
 
-/**
- * A trait defining preprocessing of the input data. There are two method for preprocessing of each data source.
- */
-
 trait FactProcessing extends Logger{
   def process_F_Message_Content(rbm_activity: DataFrame, d_natco: DataFrame,
                                 d_content_type: DataFrame, d_agent: DataFrame): DataFrame
 
   def process_F_Message_Conversation(rbm_billable_events: DataFrame,
-    d_natco: DataFrame,
-    d_agent: DataFrame):DataFrame
+    d_natco: DataFrame, d_agent: DataFrame):DataFrame
 
   def process_F_Conversation_And_SM(rbm_billable_events: DataFrame, d_natco: DataFrame,
                                     d_agent: DataFrame):DataFrame
@@ -24,9 +19,7 @@ trait FactProcessing extends Logger{
 
 }
 
-/**
- * Preprocessing implementation, two methods - one for people table preprocessing and one for salaryInfo preprocessing.
- */
+
 class Fact(implicit sparkSession: SparkSession) extends FactProcessing {
   import sparkSession.sqlContext.implicits._
 
@@ -56,17 +49,10 @@ class Fact(implicit sparkSession: SparkSession) extends FactProcessing {
       .drop("direction", "Count")
 
     // Create final MessagesByType fact by joining on Lookups to get the FKs
-    activitiesGrouped_AllDirections
+    activitiesGrouped_AllDirections.as("main")
       .join(d_content_type, d_content_type("OriginalContent") === activitiesGrouped_AllDirections("type"), "left")
       .join(d_agent, d_agent("Agent") === activitiesGrouped_AllDirections("Agent"), "left")
-      //TODO: change this workaround to work with lookup table
-      .withColumn("NatCoID",
-        when(col("NatCo") === "mt", "1")
-          .otherwise(when(col("NatCo") === "cg", "2")
-            .otherwise(when(col("NatCo") === "st", "3")
-              .otherwise(when(col("NatCo") === "cr", "4")
-                .otherwise("-1")))))
-      .drop("Agent", "type","NatCo", "activity_id")
+      .join(d_natco.as("lookup"),$"main.NatCo" === $"lookup.NatCo", "left")
       .select("Date", "NatCoID", "ContentID", "AgentID", "MT_MessagesByType", "MO_MessagesByType", "MTMO_MessagesByType")
   }
 
@@ -75,7 +61,7 @@ class Fact(implicit sparkSession: SparkSession) extends FactProcessing {
                                               d_agent: DataFrame):DataFrame = {
 
     val eventsByConvType = rbm_billable_events
-      //TODO: Determine what date should be used here
+      //TODO: Date is open topic since it's the one gotten from the filename
       .withColumn("Date", split(col("FileDate"), " ").getItem(0))
       .withColumn("Agent", split(col("agent_id"), "@").getItem(0))
       .select("Date", "NatCo", "Agent", "type", "mt_messages", "mo_messages")
@@ -84,20 +70,13 @@ class Fact(implicit sparkSession: SparkSession) extends FactProcessing {
         sum("mt_messages").alias("MT_messages"))
       .withColumn("MTMO_messages", col("mo_messages") + col("mt_messages"))
 
-    val eventsByConvAllTypes = eventsByConvType
+    val eventsByConvAllTypes = eventsByConvType.as("main")
       .filter(col("type") =!= "single_message")
       .join(d_agent, d_agent("Agent") === eventsByConvType("Agent"), "left")
-      //TODO: change this workaround to work with lookup table
-      .withColumn("NatCoID",
-        when(col("NatCo") === "mt", "1")
-          .otherwise(when(col("NatCo") === "cg", "2")
-            .otherwise(when(col("NatCo") === "st", "3")
-              .otherwise(when(col("NatCo") === "cr", "4")
-                .otherwise("-1")))))
+      .join(d_natco.as("lookup"),$"main.NatCo" === $"lookup.NatCo", "left")
       .withColumn("TypeOfConvID",
         when(col("type") === "a2p_conversation", "1")
           .otherwise(when(col("type") === "p2a_conversation", "2")))
-      .drop("Agent","NatCo")
       .select("Date","NatCoID","AgentID","TypeOfConvID","MO_messages", "MT_messages","MTMO_messages")
 
     eventsByConvAllTypes
@@ -138,15 +117,9 @@ class Fact(implicit sparkSession: SparkSession) extends FactProcessing {
 
     //eventsMessageAllTypes.show()
 
-    eventsMessageAllTypes
+    eventsMessageAllTypes.as("main")
       .join(d_agent, d_agent("Agent") === eventsMessageAllTypes("Agent"), "left")
-      //TODO: change this workaround to work with lookup table
-      .withColumn("NatCoID",
-        when(col("NatCo") === "mt", "1")
-          .otherwise(when(col("NatCo") === "cg", "2")
-            .otherwise(when(col("NatCo") === "st", "3")
-              .otherwise(when(col("NatCo") === "cr", "4")
-                .otherwise("-1")))))
+      .join(d_natco.as("lookup"),$"main.NatCo" === $"lookup.NatCo", "left")
       //fix for a2p single messages which are not part of a conversation
       .withColumn("NoOfConv",
         when(col("TypeOfSM") === "single_message" && col("TypeOfConv").isNull, 0)
@@ -158,14 +131,9 @@ class Fact(implicit sparkSession: SparkSession) extends FactProcessing {
   override def process_F_UAU(rbm_activity: DataFrame, d_natco: DataFrame):DataFrame = {
 
     import sparkSession.implicits._
-    //TODO: fix for this
-    val rbm_acivity_YMD = rbm_activity
-      .withColumn("NatCoID",
-        when(col("NatCo") === "mt", "1")
-          .otherwise(when(col("NatCo") === "cg", "2")
-            .otherwise(when(col("NatCo") === "st", "3")
-              .otherwise(when(col("NatCo") === "cr", "4")
-                .otherwise("-1")))))
+
+    val rbm_acivity_YMD = rbm_activity.as("main")
+      .join(d_natco.as("lookup"),$"main.NatCo" === $"lookup.NatCo", "left")
       .withColumn("Date", split(col("time"), " ").getItem(0))
       .withColumn("Year",year(col("time")))
       .withColumn("Month",month(col("time")))

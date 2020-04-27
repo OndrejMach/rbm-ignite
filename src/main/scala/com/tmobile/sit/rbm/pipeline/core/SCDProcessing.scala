@@ -14,12 +14,9 @@ trait SCDProcessing extends Logger{
   def handle_D_Agent(old_d_agent: DataFrame, new_d_agent: DataFrame) : DataFrame
   def handle_D_Content_Type(old_d_content_type: DataFrame, new_d_content_type: DataFrame) : DataFrame
 
-  //todo: implement generic method
+  //TODO: Nice to have: generic method
 }
 
-/**
- * Preprocessing implementation, two methods - one for people table preprocessing and one for salaryInfo preprocessing.
- */
 class SCDHandler(implicit sparkSession: SparkSession) extends SCDProcessing {
   import sparkSession.sqlContext.implicits._
 

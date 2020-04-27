@@ -23,7 +23,7 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
   override def process(preprocessedData: PreprocessedData, persistentData: PersistentData): OutputData = {
     logger.info("Executing  processing core")
 
-    //TODO: Find workaround for false crossJoin detection besides enabling crosJoin in spark
+    //TODO: Find other workaround for false crossJoin detection besides enabling crosJoin in spark
     sparkSession.conf.set("spark.sql.crossJoin.enabled", "true")
     val handleSCD = new SCDHandler()
     val dimensionProcessor = new Dimension()
