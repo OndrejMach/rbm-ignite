@@ -1,11 +1,8 @@
 package com.tmobile.sit.rbm.pipeline
 
 import com.tmobile.sit.common.Logger
-import com.tmobile.sit.rbm.pipeline.core.{Dimension, Fact, SCDHandler, SCDProcessing}
-import org.apache.spark.sql.functions.{avg, col, concat_ws, count, countDistinct, lit, month, regexp_replace, row_number, split, sum, when, year}
-import org.apache.spark.sql.{DataFrame, SparkSession}
-import org.apache.spark.sql.expressions.Window
-
+import com.tmobile.sit.rbm.pipeline.core.{Dimension, Fact, SCDHandler}
+import org.apache.spark.sql.{SparkSession}
 
 /**
  * trait defining interface for the main processing block
@@ -41,12 +38,10 @@ class CoreLogicWithTransform (implicit sparkSession: SparkSession) extends Proce
     //**********************
     val old_d_agent_owner = persistentData.d_agent_owner
     val new_d_agent_owner = dimensionProcessor.process_D_Agent_Owner(preprocessedData.rbm_billable_events)
-
     val d_agent_owner = handleSCD.handle_D_Agent_Owner(old_d_agent_owner, new_d_agent_owner)
     //**********************
     val new_d_agent = dimensionProcessor.process_D_Agent(preprocessedData.rbm_activity,preprocessedData.rbm_billable_events,d_agent_owner)
     val old_d_agent = persistentData.d_agent
-
     val d_agent = handleSCD.handle_D_Agent(old_d_agent, new_d_agent)
     //**********************
     val new_d_content_type = dimensionProcessor.process_D_Content_Type(preprocessedData.rbm_activity, preprocessedData.ContentDescriptionMapping)
