@@ -5,6 +5,9 @@ import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions.{col, lit, row_number, split}
 
+/**
+ * Class trait/interface which needs to be implemented
+ */
 trait DimensionProcessing extends Logger{
   def process_D_Agent_Owner(rbm_billable_events: DataFrame):DataFrame
   def process_D_Agent(rbm_activity: DataFrame, rbm_billable_events: DataFrame, d_agent_owner: DataFrame): DataFrame
@@ -14,6 +17,8 @@ trait DimensionProcessing extends Logger{
 class Dimension(implicit sparkSession: SparkSession) extends DimensionProcessing {
 
   override def process_D_Agent_Owner(rbm_billable_events: DataFrame):DataFrame = {
+    logger.info("Processing d_agent_owner for today")
+
     rbm_billable_events
       .withColumn("AgentOwner", split(col("agent_owner"), "@").getItem(0))
       .select("AgentOwner")
@@ -23,6 +28,7 @@ class Dimension(implicit sparkSession: SparkSession) extends DimensionProcessing
 }
 
   override def process_D_Agent(rbm_activity: DataFrame, rbm_billable_events: DataFrame, d_agent_owner: DataFrame): DataFrame = {
+    logger.info("Processing d_agent for today")
 
     //Get distinct agents from both sources
     val distinctAgents = rbm_activity.select("agent_id")
@@ -47,6 +53,8 @@ class Dimension(implicit sparkSession: SparkSession) extends DimensionProcessing
   }
 
   override def process_D_Content_Type(rbm_activity: DataFrame, ContentDescriptionMapping: DataFrame): DataFrame  = {
+    logger.info("Processing d_content_type for today")
+
     // Select distinct activity_id and type pairs
     rbm_activity.select("activity_id", "type").distinct()
       .join(ContentDescriptionMapping,

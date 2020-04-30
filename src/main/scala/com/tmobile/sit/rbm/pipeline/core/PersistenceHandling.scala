@@ -3,17 +3,15 @@ package com.tmobile.sit.rbm.pipeline.core
 import com.tmobile.sit.common.Logger
 import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import org.apache.spark.sql.functions.{lit, row_number}
+import org.apache.spark.sql.functions.{lit, row_number, sum}
 
 /**
- * A trait defining preprocessing of the input data. There are two method for preprocessing of each data source.
+ * Class trait/interface which needs to be implemented
  */
-
 trait SCDProcessing extends Logger{
   def handle_D_Agent_Owner(old_d_agent_owner: DataFrame, new_d_agent_owner: DataFrame) : DataFrame
   def handle_D_Agent(old_d_agent: DataFrame, new_d_agent: DataFrame) : DataFrame
   def handle_D_Content_Type(old_d_content_type: DataFrame, new_d_content_type: DataFrame) : DataFrame
-
   //TODO: Nice to have: generic method
 }
 
@@ -21,6 +19,8 @@ class SCDHandler(implicit sparkSession: SparkSession) extends SCDProcessing {
   import sparkSession.sqlContext.implicits._
 
   override def handle_D_Agent_Owner(old_d_agent_owner: DataFrame, new_d_agent_owner: DataFrame): DataFrame = {
+    logger.info("Handling d_agent_owner SCD")
+
     old_d_agent_owner
     .withColumn("Order",lit("1"))
     .union(
@@ -38,6 +38,8 @@ class SCDHandler(implicit sparkSession: SparkSession) extends SCDProcessing {
     .select("AgentOwnerID","AgentOwner")
   }
   override def handle_D_Agent(old_d_agent: DataFrame, new_d_agent: DataFrame): DataFrame = {
+    logger.info("Handling d_agent SCD")
+
     old_d_agent
       .withColumn("Order",lit("1"))
       .union(
@@ -55,6 +57,8 @@ class SCDHandler(implicit sparkSession: SparkSession) extends SCDProcessing {
       .select("AgentID","AgentOwnerID", "Agent")
   }
   override def handle_D_Content_Type(old_d_content_type: DataFrame, new_d_content_type: DataFrame): DataFrame = {
+    logger.info("Handling d_content_type SCD")
+
     old_d_content_type
      .union(
         new_d_content_type
@@ -70,3 +74,5 @@ class SCDHandler(implicit sparkSession: SparkSession) extends SCDProcessing {
       .select("ContentID","OriginalContent", "Content")
   }
 }
+
+

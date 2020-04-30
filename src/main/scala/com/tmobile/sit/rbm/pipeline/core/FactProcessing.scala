@@ -5,6 +5,9 @@ import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions.{avg, col, concat_ws, count, countDistinct, lit, month, regexp_replace, row_number, split, sum, when, year}
 
+/**
+ * Class trait/interface which needs to be implemented
+ */
 trait FactProcessing extends Logger{
   def process_F_Message_Content(rbm_activity: DataFrame, d_natco: DataFrame,
                                 d_content_type: DataFrame, d_agent: DataFrame): DataFrame
@@ -15,16 +18,21 @@ trait FactProcessing extends Logger{
   def process_F_Conversation_And_SM(rbm_billable_events: DataFrame, d_natco: DataFrame,
                                     d_agent: DataFrame):DataFrame
 
-  def process_F_UAU(rbm_activity: DataFrame, d_natco: DataFrame):DataFrame
+  def process_F_UAU_Daily(rbm_activity: DataFrame, d_natco: DataFrame):DataFrame
 
 }
 
 
 class Fact(implicit sparkSession: SparkSession) extends FactProcessing {
+
+
+
   import sparkSession.sqlContext.implicits._
 
   override def process_F_Message_Content(rbm_activity: DataFrame, d_natco: DataFrame,
                                          d_content_type: DataFrame, d_agent: DataFrame): DataFrame = {
+    logger.info("Processing f_message_content for day")
+
     // Count MT and MO messages per group
     val activityGroupedByDirection = rbm_activity
       .withColumn("Date", split(col("time"), " ").getItem(0))
@@ -59,6 +67,7 @@ class Fact(implicit sparkSession: SparkSession) extends FactProcessing {
   override def process_F_Message_Conversation(rbm_billable_events: DataFrame,
                                               d_natco: DataFrame,
                                               d_agent: DataFrame):DataFrame = {
+    logger.info("Processing f_message_conversation for day")
 
     val eventsByConvType = rbm_billable_events
       //TODO: Date is open topic since it's the one gotten from the filename
@@ -84,6 +93,8 @@ class Fact(implicit sparkSession: SparkSession) extends FactProcessing {
 
   override def process_F_Conversation_And_SM(rbm_billable_events: DataFrame, d_natco: DataFrame,
                                              d_agent: DataFrame):DataFrame = {
+    logger.info("Processing f_conversation_and_sm for day")
+
     // Count MT and MO messages per group (ap, pa, sm)
     val eventsByMessageType = rbm_billable_events
       .withColumn("Date", split(col("FileDate"), " ").getItem(0))
@@ -128,49 +139,62 @@ class Fact(implicit sparkSession: SparkSession) extends FactProcessing {
       .select("Date", "NatCoID", "AgentID", "TypeOfConvID", "AverageDuration", "NoOfConv", /*"TypeOfSM",*/"NoOfSM")
   }
 
-  override def process_F_UAU(rbm_activity: DataFrame, d_natco: DataFrame):DataFrame = {
+  def preprocess_Acc_UAU_Daily(acc_uau_daily: DataFrame, rbm_activity: DataFrame, d_natco: DataFrame):DataFrame = {
 
-    import sparkSession.implicits._
-
-    val rbm_acivity_YMD = rbm_activity.as("main")
+    logger.info("Preprocessing UAU Accumulator")
+    val uau_today = rbm_activity.as("main")
       .join(d_natco.as("lookup"),$"main.NatCo" === $"lookup.NatCo", "left")
       .withColumn("Date", split(col("time"), " ").getItem(0))
-      .withColumn("Year",year(col("time")))
-      .withColumn("Month",month(col("time")))
-      .withColumn("YearMonth", concat_ws("-",year(col("time")),month(col("time"))))
-      .select("Date", "Year","YearMonth", "Month", "NatCoID", "user_id")
+      .select("Date",  "NatCoID", "user_id")
 
-    val rbm_activity_daily = rbm_acivity_YMD
-      .select("Date", "YearMonth", "Year", "NatCoID", "user_id")
-      .groupBy("Date", "YearMonth", "Year", "NatCoID")
+
+    acc_uau_daily
+      .withColumn("Date", col("Date").cast("date"))
+      .union(uau_today)
+      .orderBy("Date")
+  }
+
+  override def process_F_UAU_Daily(new_acc_uau_daily:DataFrame, d_natco: DataFrame):DataFrame = {
+    //TODO: Decide if d_natco mapping should be here or in accumulator
+
+    logger.info("Processing f_uau_daily")
+    val f_uau_daily = new_acc_uau_daily
+      .select("Date", "NatCoID", "user_id")
+      .withColumn("Date", col("Date").cast("date"))
+      .groupBy("Date", "NatCoID")
       .agg(countDistinct("user_id").alias("UAU_daily"))
+      .select("Date", "NatCoID", "UAU_daily")
+      .orderBy("Date")
 
-    val rbm_activity_monthly = rbm_acivity_YMD
+    f_uau_daily
+  }
+
+  def process_F_UAU_Monthly(f_uau_daily: DataFrame):DataFrame = {
+    logger.info("Processing f_uau_monthly")
+
+    f_uau_daily
+      .withColumn("YearMonth", concat_ws("-",year(col("Date")),month(col("Date"))))
       .groupBy("YearMonth", "NatCoID")
-      .agg(countDistinct("user_id").alias("UAU_monthly"))
+      .agg(sum("UAU_Daily").alias("UAU_monthly"))
+      .select("YearMonth", "NatCoID", "UAU_monthly")
+  }
 
-    val rbm_activity_yearly = rbm_acivity_YMD
+  def process_F_UAU_Yearly(f_uau_daily: DataFrame):DataFrame = {
+    logger.info("Processing f_uau_yearly")
+
+    f_uau_daily
+      .withColumn("Year", year(col("Date")))
       .groupBy("Year", "NatCoID")
-      .agg(countDistinct("user_id").alias("UAU_yearly"))
+      .agg(sum("UAU_Daily").alias("UAU_yearly"))
+      .select("Year", "NatCoID", "UAU_yearly")
+  }
 
-    val rbm_activity_total = rbm_acivity_YMD
-      .groupBy("NatCoID")
-      .agg(countDistinct("user_id").alias("UAU_total"))
+  def process_F_UAU_Total(f_uau_daily: DataFrame):DataFrame = {
+    logger.info("Processing f_uau_total")
 
-    val rbm_activity_daily_final = rbm_activity_daily.as("d")
-      .join(rbm_activity_monthly.as("m"),
-        $"d.YearMonth" === $"m.YearMonth" &&
-          $"d.NatCoID" === $"m.NatCoID",
-        "leftouter")
-      .join(rbm_activity_yearly.as("y"),
-        $"d.Year" === $"y.Year" &&
-          $"d.NatCoID" === $"y.NatCoID",
-        "leftouter")
-      .join(rbm_activity_total.as("t"),
-        $"d.NatCoID" === $"t.NatCoID",
-        "leftouter")
-      .select("Date", "d.NatCoID","UAU_daily", "UAU_monthly", "UAU_yearly", "UAU_total")
-
-    rbm_activity_daily_final
+    f_uau_daily
+      .groupBy( "NatCoID")
+      .agg(sum("UAU_Daily").alias("UAU_total"))
+      .select( "NatCoID", "UAU_total")
   }
 }

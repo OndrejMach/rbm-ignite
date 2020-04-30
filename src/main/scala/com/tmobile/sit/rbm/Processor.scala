@@ -3,13 +3,12 @@ package com.tmobile.sit.rbm
 import com.tmobile.sit.common.Logger
 import com.tmobile.sit.common.readers.CSVReader
 import com.tmobile.sit.rbm.config.Setup
-import com.tmobile.sit.rbm.pipeline.{CoreLogicWithTransform, FileMetaData, InputData, MappingData, PersistentData, Pipeline, ResultPaths, ResultWriter, Stage}
+import com.tmobile.sit.rbm.pipeline.{CoreProcessing, FileMetaData, InputData, MappingData, PersistentData, Pipeline, ResultPaths, ResultWriter, Stage}
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 
 
 object Processor extends App with Logger {
-
-  logger.info("Arguments: ")
 
   if(args.length == 0){
     logger.error("Arguments required. Options: -natco=<natco> [-date=<date yyyy-mm-dd>]")
@@ -35,6 +34,7 @@ object Processor extends App with Logger {
     }
   }
 
+  //Set config file based on system OS property
   val configFile = if(System.getProperty("os.name").startsWith("Windows")) {
     logger.info("Detected Windows configuration")
     "rbm_config.windows.conf"
@@ -74,12 +74,13 @@ object Processor extends App with Logger {
   val persistentData = PersistentData(
     d_agent_owner = new CSVReader(conf.settings.outputPath.get + "d_agent_owner.csv", header = true, delimiter = ";").read(),
     d_agent = new CSVReader(conf.settings.outputPath.get + "d_agent.csv", header = true, delimiter = ";").read(),
-    d_content_type = new CSVReader(conf.settings.outputPath.get + "d_content_type.csv", header = true, delimiter = ";").read()
+    d_content_type = new CSVReader(conf.settings.outputPath.get + "d_content_type.csv", header = true, delimiter = ";").read(),
+    acc_uau_daily = new CSVReader(conf.settings.lookupPath.get + s"acc_uau_daily_${fileMetaData.file_natco_id}.csv", header = true, delimiter = ";").read()
   )
 
   val stage = new Stage()
 
-  val processingCore = new CoreLogicWithTransform()
+  val processingCore = new CoreProcessing()
 
   val resultPaths = ResultPaths(conf.settings.lookupPath.get, conf.settings.outputPath.get)
 

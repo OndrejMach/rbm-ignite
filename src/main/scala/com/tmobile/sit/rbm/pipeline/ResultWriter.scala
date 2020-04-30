@@ -11,9 +11,9 @@ trait Writer extends Logger{
 class ResultWriter(resultPaths: ResultPaths, fileMetaData: FileMetaData) (implicit sparkSession: SparkSession) extends Writer {
   override def write(outputData: OutputData) =
   {
-    /* Write output files*/
-    logger.info("NOTE: ENABLE RESULT WRITER")
-    var fileSuffix = fileMetaData.file_date.replace("-","")+"_"+fileMetaData.file_natco_id
+    logger.info("Writing output files")
+    //logger.info("NOTE: ENABLE RESULT WRITER")
+    val fileSuffix = fileMetaData.file_date.replace("-","")+"_"+fileMetaData.file_natco_id
 
     CSVWriter(outputData.d_natco, resultPaths.outputPath+"d_natco.csv", delimiter = ";").writeData()
     CSVWriter(outputData.d_content_type, resultPaths.outputPath+"d_content_type.csv", delimiter = ";").writeData()
@@ -23,8 +23,10 @@ class ResultWriter(resultPaths: ResultPaths, fileMetaData: FileMetaData) (implic
     CSVWriter(outputData.f_message_content, resultPaths.outputPath+s"f_message_content_${fileSuffix}.csv", delimiter = ";").writeData()
     CSVWriter(outputData.f_conversations_and_sm, resultPaths.outputPath+s"f_conversations_and_sm_${fileSuffix}.csv", delimiter = ";").writeData()
     CSVWriter(outputData.f_message_conversation, resultPaths.outputPath+s"f_message_conversation_${fileSuffix}.csv", delimiter = ";").writeData()
-    CSVWriter(outputData.f_uau, resultPaths.outputPath+s"f_uau_${fileSuffix}.csv", delimiter = ";").writeData()
-
-
+    CSVWriter(outputData.f_uau_daily, resultPaths.outputPath+s"f_uau_daily_${fileMetaData.file_natco_id}.csv", delimiter = ";").writeData()
+    CSVWriter(outputData.f_uau_monthly, resultPaths.outputPath+s"f_uau_monthly_${fileMetaData.file_natco_id}.csv", delimiter = ";").writeData()
+    CSVWriter(outputData.f_uau_yearly, resultPaths.outputPath+s"f_uau_yearly_${fileMetaData.file_natco_id}.csv", delimiter = ";").writeData()
+    CSVWriter(outputData.f_uau_total, resultPaths.outputPath+s"f_uau_total_${fileMetaData.file_natco_id}.csv", delimiter = ";").writeData()
+    CSVWriter(outputData.new_acc_uau_daily, resultPaths.lookupPath+s"acc_uau_daily_${fileMetaData.file_natco_id}.csv", delimiter = ";").writeData()
   }
 }

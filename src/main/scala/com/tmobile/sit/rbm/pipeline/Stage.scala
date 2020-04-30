@@ -5,9 +5,8 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions.lit
 
 /**
- * A trait defining preprocessing of the input data. There are two method for preprocessing of each data source.
+ * Class trait/interface which needs to be implemented
  */
-
 trait StageProcessing extends Logger{
   def preprocessActivity(input: DataFrame, file_natco_id: String) : DataFrame
   def preprocessEvents(input: DataFrame, file_natco_id: String, file_date: String) : DataFrame
@@ -17,20 +16,16 @@ trait StageProcessing extends Logger{
 }
 
 /**
- * Preprocessing implementation, two methods - one for people table preprocessing and one for salaryInfo preprocessing.
+ * Stage class implementation
  */
 class Stage  (implicit sparkSession: SparkSession) extends StageProcessing {
-  import sparkSession.sqlContext.implicits._
-  /**
-   * Prepares people data for processing. Basically a simple step dropping one column and filtering data based on the ID value.
-   * @param rbmActivity - a DataFrame containing people table read from CSV
-   * @return - people data tuned and preprocessed.
-   */
 
+  // Adding NatCo column based on file source
   override def preprocessActivity(rbmActivity: DataFrame, file_natco_id: String): DataFrame = {
     rbmActivity.withColumn("NatCo", lit(file_natco_id))
   }
 
+  // Adding NatCo and FileDate column based on file source
   override def preprocessEvents(rbmEvents: DataFrame, file_natco_id: String, file_date: String) : DataFrame = {
     rbmEvents.withColumn("NatCo", lit(file_natco_id))
       .withColumn("FileDate", lit(file_date))
