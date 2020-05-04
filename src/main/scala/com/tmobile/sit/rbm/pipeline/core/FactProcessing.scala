@@ -138,21 +138,6 @@ class Fact(implicit sparkSession: SparkSession) extends FactProcessing {
       .withColumn("AverageDuration", regexp_replace(col("AverageDuration"), lit("\\."), lit(",")))
       .select("Date", "NatCoID", "AgentID", "TypeOfConvID", "AverageDuration", "NoOfConv", /*"TypeOfSM",*/"NoOfSM")
   }
-/*
-  def preprocess_Acc_UAU_Daily(acc_uau_daily: DataFrame, rbm_activity: DataFrame ):DataFrame = {
-
-    logger.info("Preprocessing UAU Accumulator")
-    val uau_today = rbm_activity
-      .withColumn("Date", split(col("time"), " ").getItem(0))
-      .select("Date",  "NatCo", "user_id")
-
-    acc_uau_daily
-      .withColumn("Date", col("Date").cast("date"))
-      .union(uau_today)
-      .orderBy("Date")
-  }
-
- */
 
   override def process_F_UAU_Daily(new_acc_uau_daily:DataFrame, d_natco: DataFrame):DataFrame = {
     logger.info("Processing f_uau_daily")
