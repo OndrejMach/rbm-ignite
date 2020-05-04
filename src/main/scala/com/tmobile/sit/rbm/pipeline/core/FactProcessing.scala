@@ -147,7 +147,6 @@ class Fact(implicit sparkSession: SparkSession) extends FactProcessing {
       .withColumn("Date", split(col("time"), " ").getItem(0))
       .select("Date",  "NatCoID", "user_id")
 
-
     acc_uau_daily
       .withColumn("Date", col("Date").cast("date"))
       .union(uau_today)
@@ -155,10 +154,10 @@ class Fact(implicit sparkSession: SparkSession) extends FactProcessing {
   }
 
   override def process_F_UAU_Daily(new_acc_uau_daily:DataFrame, d_natco: DataFrame):DataFrame = {
+    logger.info("Processing f_uau_daily")
     //TODO: Decide if d_natco mapping should be here or in accumulator
 
-    logger.info("Processing f_uau_daily")
-    val f_uau_daily = new_acc_uau_daily
+    new_acc_uau_daily
       .select("Date", "NatCoID", "user_id")
       .withColumn("Date", col("Date").cast("date"))
       .groupBy("Date", "NatCoID")
@@ -166,35 +165,39 @@ class Fact(implicit sparkSession: SparkSession) extends FactProcessing {
       .select("Date", "NatCoID", "UAU_daily")
       .orderBy("Date")
 
-    f_uau_daily
   }
 
-  def process_F_UAU_Monthly(f_uau_daily: DataFrame):DataFrame = {
+  def process_F_UAU_Monthly(new_acc_uau_daily:DataFrame, d_natco: DataFrame):DataFrame = {
     logger.info("Processing f_uau_monthly")
+    //TODO: Decide if d_natco mapping should be here or in accumulator
 
-    f_uau_daily
+    new_acc_uau_daily
+      .select("Date", "NatCoID", "user_id")
       .withColumn("YearMonth", concat_ws("-",year(col("Date")),month(col("Date"))))
       .groupBy("YearMonth", "NatCoID")
-      .agg(sum("UAU_Daily").alias("UAU_monthly"))
+      .agg(countDistinct("user_id").alias("UAU_monthly"))
       .select("YearMonth", "NatCoID", "UAU_monthly")
   }
 
-  def process_F_UAU_Yearly(f_uau_daily: DataFrame):DataFrame = {
+  def process_F_UAU_Yearly(new_acc_uau_daily:DataFrame, d_natco: DataFrame):DataFrame = {
     logger.info("Processing f_uau_yearly")
+    //TODO: Decide if d_natco mapping should be here or in accumulator
 
-    f_uau_daily
+    new_acc_uau_daily
+      .select("Date", "NatCoID", "user_id")
       .withColumn("Year", year(col("Date")))
       .groupBy("Year", "NatCoID")
-      .agg(sum("UAU_Daily").alias("UAU_yearly"))
+      .agg(countDistinct("user_id").alias("UAU_yearly"))
       .select("Year", "NatCoID", "UAU_yearly")
   }
 
-  def process_F_UAU_Total(f_uau_daily: DataFrame):DataFrame = {
+  def process_F_UAU_Total(new_acc_uau_daily:DataFrame, d_natco: DataFrame):DataFrame = {
     logger.info("Processing f_uau_total")
+    //TODO: Decide if d_natco mapping should be here or in accumulator
 
-    f_uau_daily
+    new_acc_uau_daily
       .groupBy( "NatCoID")
-      .agg(sum("UAU_Daily").alias("UAU_total"))
+      .agg(countDistinct("user_id").alias("UAU_total"))
       .select( "NatCoID", "UAU_total")
   }
 }

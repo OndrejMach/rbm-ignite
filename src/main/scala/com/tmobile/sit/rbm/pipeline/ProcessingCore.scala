@@ -56,18 +56,16 @@ class CoreProcessing(implicit sparkSession: SparkSession) extends ProcessingCore
       d_natco,
       d_agent)
 
-    // UAU accumulating facts. Reprocess daily, re-create higher grains
-    // Recreate accumulator
+    // UAU accumulating facts. Recreate accumulator and reprocess facts
     val new_acc_uau_daily = factProcessor.preprocess_Acc_UAU_Daily(
         persistentData.acc_uau_daily,
         preprocessedData.rbm_activity,
         d_natco)
 
     val f_uau_daily = factProcessor.process_F_UAU_Daily(new_acc_uau_daily, d_natco)
-
-    val f_uau_monthly = factProcessor.process_F_UAU_Monthly(f_uau_daily)
-    val f_uau_yearly = factProcessor.process_F_UAU_Yearly(f_uau_daily)
-    val f_uau_total = factProcessor.process_F_UAU_Total(f_uau_daily)
+    val f_uau_monthly = factProcessor.process_F_UAU_Monthly(new_acc_uau_daily, d_natco)
+    val f_uau_yearly = factProcessor.process_F_UAU_Yearly(new_acc_uau_daily, d_natco)
+    val f_uau_total = factProcessor.process_F_UAU_Total(new_acc_uau_daily, d_natco)
 
     //Return OutputData object
     OutputData(d_natco,
