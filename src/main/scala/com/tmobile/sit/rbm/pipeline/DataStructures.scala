@@ -20,13 +20,14 @@ case class FileMetaData(file_natco_id: String,
 case class PersistentData(d_agent: DataFrame,
                           d_agent_owner: DataFrame,
                           d_content_type: DataFrame,
-                          acc_uau_daily: DataFrame)
+                          acc_users_daily: DataFrame)
 
 case class PreprocessedData(rbm_activity: DataFrame,
                             rbm_billable_events: DataFrame,
                             NatCoMapping: DataFrame,
                             ConversationTypeMapping: DataFrame,
-                            ContentDescriptionMapping: DataFrame)
+                            ContentDescriptionMapping: DataFrame,
+                            AccUsersDaily: DataFrame)
 
 case class ResultPaths(lookupPath: String, outputPath: String)
 

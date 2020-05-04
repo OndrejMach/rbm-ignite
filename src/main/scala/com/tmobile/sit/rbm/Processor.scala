@@ -75,7 +75,7 @@ object Processor extends App with Logger {
     d_agent_owner = new CSVReader(conf.settings.outputPath.get + "d_agent_owner.csv", header = true, delimiter = ";").read(),
     d_agent = new CSVReader(conf.settings.outputPath.get + "d_agent.csv", header = true, delimiter = ";").read(),
     d_content_type = new CSVReader(conf.settings.outputPath.get + "d_content_type.csv", header = true, delimiter = ";").read(),
-    acc_uau_daily = new CSVReader(conf.settings.lookupPath.get + s"acc_uau_daily_${fileMetaData.file_natco_id}.csv", header = true, delimiter = ";").read()
+    acc_users_daily = new CSVReader(conf.settings.lookupPath.get + s"acc_users_daily_${fileMetaData.file_natco_id}.csv", header = true, delimiter = ";").read()
   )
 
   val stage = new Stage()

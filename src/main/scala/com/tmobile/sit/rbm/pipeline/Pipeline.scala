@@ -22,7 +22,8 @@ class Pipeline(inputData: InputData, mappingData: MappingData, fileMetaData: Fil
         stage.preprocessEvents(inputData.rbm_billable_events.read(),fileMetaData.file_natco_id, fileMetaData.file_date),
         stage.preprocessNatCoMapping(mappingData.NatCoMapping.read()),
         stage.preprocessConversationTypeMapping(mappingData.ConversationTypeMapping.read()),
-        stage.preprocessContentDescriptionMapping(mappingData.ContentDescriptionMapping.read())
+        stage.preprocessContentDescriptionMapping(mappingData.ContentDescriptionMapping.read()),
+        stage.preprocessAccUsersDaily(persistentData.acc_users_daily,inputData.rbm_activity.read(),fileMetaData.file_date,fileMetaData.file_natco_id)
       )
 
     val result = core.process(preprocessedData, persistentData)

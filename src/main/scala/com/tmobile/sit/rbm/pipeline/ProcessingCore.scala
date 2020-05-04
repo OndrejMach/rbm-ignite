@@ -56,15 +56,13 @@ class CoreProcessing(implicit sparkSession: SparkSession) extends ProcessingCore
       d_natco,
       d_agent)
 
-    // UAU accumulating facts. Recreate accumulator and reprocess facts
-    val new_acc_uau_daily = factProcessor.preprocess_Acc_UAU_Daily(
-        persistentData.acc_uau_daily,
-        preprocessedData.rbm_activity)
+    // UAU accumulating facts. The accumulator is already preprocessed
+    val new_acc_users_daily = preprocessedData.AccUsersDaily
 
-    val f_uau_daily = factProcessor.process_F_UAU_Daily(new_acc_uau_daily, d_natco)
-    val f_uau_monthly = factProcessor.process_F_UAU_Monthly(new_acc_uau_daily, d_natco)
-    val f_uau_yearly = factProcessor.process_F_UAU_Yearly(new_acc_uau_daily, d_natco)
-    val f_uau_total = factProcessor.process_F_UAU_Total(new_acc_uau_daily, d_natco)
+    val f_uau_daily = factProcessor.process_F_UAU_Daily(new_acc_users_daily, d_natco)
+    val f_uau_monthly = factProcessor.process_F_UAU_Monthly(new_acc_users_daily, d_natco)
+    val f_uau_yearly = factProcessor.process_F_UAU_Yearly(new_acc_users_daily, d_natco)
+    val f_uau_total = factProcessor.process_F_UAU_Total(new_acc_users_daily, d_natco)
 
     //Return OutputData object
     OutputData(d_natco,
@@ -79,6 +77,6 @@ class CoreProcessing(implicit sparkSession: SparkSession) extends ProcessingCore
       f_uau_monthly,
       f_uau_yearly,
       f_uau_total,
-      new_acc_uau_daily)
+      new_acc_users_daily)
   }
 }

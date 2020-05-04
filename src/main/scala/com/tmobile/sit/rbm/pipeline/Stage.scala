@@ -2,7 +2,7 @@ package com.tmobile.sit.rbm.pipeline
 
 import com.tmobile.sit.common.Logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import org.apache.spark.sql.functions.lit
+import org.apache.spark.sql.functions.{col, lit, split}
 
 /**
  * Class trait/interface which needs to be implemented
@@ -13,12 +13,34 @@ trait StageProcessing extends Logger{
   def preprocessNatCoMapping(input: DataFrame) : DataFrame
   def preprocessConversationTypeMapping(input: DataFrame) : DataFrame
   def preprocessContentDescriptionMapping(input: DataFrame) : DataFrame
+  def preprocessAccUsersDaily(acc_uau_daily: DataFrame, rbmActivity: DataFrame,
+                              file_date: String, file_natco_id: String):DataFrame
 }
 
 /**
  * Stage class implementation
  */
 class Stage  (implicit sparkSession: SparkSession) extends StageProcessing {
+
+  import sparkSession.sqlContext.implicits._
+
+  override def preprocessAccUsersDaily(acc_users_daily: DataFrame, rbmActivity: DataFrame,
+                                       file_date: String, file_natco_id: String):DataFrame = {
+    logger.info("Preprocessing UAU Accumulator")
+    val users_today = rbmActivity
+      .withColumn("Date", split(col("time"), " ").getItem(0))
+      .withColumn("FileDate", lit(file_date))
+      .withColumn("NatCo", lit(file_natco_id))
+      .select("FileDate",  "Date", "NatCo", "user_id")
+
+    acc_users_daily
+      .filter($"FileDate" =!= lit(file_date))
+      .withColumn("Date", col("Date").cast("date"))
+      .withColumn("FileDate", col("FileDate").cast("date"))
+      .select("FileDate",  "Date", "NatCo", "user_id")
+      .union(users_today)
+      .orderBy("FileDate")
+  }
 
   // Adding NatCo column based on file source
   override def preprocessActivity(rbmActivity: DataFrame, file_natco_id: String): DataFrame = {

@@ -27,6 +27,6 @@ class ResultWriter(resultPaths: ResultPaths, fileMetaData: FileMetaData) (implic
     CSVWriter(outputData.f_uau_monthly, resultPaths.outputPath+s"f_uau_monthly_${fileMetaData.file_natco_id}.csv", delimiter = ";").writeData()
     CSVWriter(outputData.f_uau_yearly, resultPaths.outputPath+s"f_uau_yearly_${fileMetaData.file_natco_id}.csv", delimiter = ";").writeData()
     CSVWriter(outputData.f_uau_total, resultPaths.outputPath+s"f_uau_total_${fileMetaData.file_natco_id}.csv", delimiter = ";").writeData()
-    CSVWriter(outputData.new_acc_uau_daily, resultPaths.lookupPath+s"acc_uau_daily_${fileMetaData.file_natco_id}.csv", delimiter = ";").writeData()
+    CSVWriter(outputData.new_acc_uau_daily, resultPaths.lookupPath+s"acc_users_daily_${fileMetaData.file_natco_id}.csv", delimiter = ";").writeData()
   }
 }

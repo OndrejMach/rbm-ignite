@@ -138,8 +138,8 @@ class Fact(implicit sparkSession: SparkSession) extends FactProcessing {
       .withColumn("AverageDuration", regexp_replace(col("AverageDuration"), lit("\\."), lit(",")))
       .select("Date", "NatCoID", "AgentID", "TypeOfConvID", "AverageDuration", "NoOfConv", /*"TypeOfSM",*/"NoOfSM")
   }
-
-  def preprocess_Acc_UAU_Daily(acc_uau_daily: DataFrame, rbm_activity: DataFrame):DataFrame = {
+/*
+  def preprocess_Acc_UAU_Daily(acc_uau_daily: DataFrame, rbm_activity: DataFrame ):DataFrame = {
 
     logger.info("Preprocessing UAU Accumulator")
     val uau_today = rbm_activity
@@ -152,9 +152,10 @@ class Fact(implicit sparkSession: SparkSession) extends FactProcessing {
       .orderBy("Date")
   }
 
+ */
+
   override def process_F_UAU_Daily(new_acc_uau_daily:DataFrame, d_natco: DataFrame):DataFrame = {
     logger.info("Processing f_uau_daily")
-    //TODO: Decide if d_natco mapping should be here or in accumulator
 
     new_acc_uau_daily.as("main")
       .select("Date", "NatCo", "user_id")
@@ -169,7 +170,6 @@ class Fact(implicit sparkSession: SparkSession) extends FactProcessing {
 
   def process_F_UAU_Monthly(new_acc_uau_daily:DataFrame, d_natco: DataFrame):DataFrame = {
     logger.info("Processing f_uau_monthly")
-    //TODO: Decide if d_natco mapping should be here or in accumulator
 
     new_acc_uau_daily.as("main")
       .select("Date", "NatCo", "user_id")
@@ -182,7 +182,6 @@ class Fact(implicit sparkSession: SparkSession) extends FactProcessing {
 
   def process_F_UAU_Yearly(new_acc_uau_daily:DataFrame, d_natco: DataFrame):DataFrame = {
     logger.info("Processing f_uau_yearly")
-    //TODO: Decide if d_natco mapping should be here or in accumulator
 
     new_acc_uau_daily.as("main")
       .select("Date", "NatCo", "user_id")
@@ -195,7 +194,6 @@ class Fact(implicit sparkSession: SparkSession) extends FactProcessing {
 
   def process_F_UAU_Total(new_acc_uau_daily:DataFrame, d_natco: DataFrame):DataFrame = {
     logger.info("Processing f_uau_total")
-    //TODO: Decide if d_natco mapping should be here or in accumulator
 
     new_acc_uau_daily.as("main")
       .select("Date", "NatCo", "user_id")
