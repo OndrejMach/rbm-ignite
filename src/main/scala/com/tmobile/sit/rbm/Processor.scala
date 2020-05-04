@@ -10,6 +10,8 @@ import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructT
 
 object Processor extends App with Logger {
 
+  logger.info("Started processing")
+
   if(args.length == 0){
     logger.error("Arguments required. Options: -natco=<natco> [-date=<date yyyy-mm-dd>]")
     System.exit(1)
