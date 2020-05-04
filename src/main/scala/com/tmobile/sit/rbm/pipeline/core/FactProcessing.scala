@@ -1,9 +1,8 @@
 package com.tmobile.sit.rbm.pipeline.core
 
 import com.tmobile.sit.common.Logger
-import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import org.apache.spark.sql.functions.{avg, col, concat_ws, count, countDistinct, lit, month, regexp_replace, row_number, split, sum, when, year}
+import org.apache.spark.sql.functions.{avg, col, concat_ws, date_format, count, countDistinct, lit, month, regexp_replace, row_number, split, sum, when, year}
 
 /**
  * Class trait/interface which needs to be implemented
@@ -159,7 +158,7 @@ class Fact(implicit sparkSession: SparkSession) extends FactProcessing {
     new_acc_uau_daily.as("main")
       .select("Date", "NatCo", "user_id")
       .join(d_natco.as("lookup"),$"main.NatCo" === $"lookup.NatCo", "left")
-      .withColumn("YearMonth", concat_ws("-",year(col("Date")),month(col("Date"))))
+      .withColumn("YearMonth", date_format(col("Date"),"yyyy-MM"))
       .groupBy("YearMonth", "NatCoID")
       .agg(countDistinct("user_id").alias("UAU_monthly"))
       .select("YearMonth", "NatCoID", "UAU_monthly")

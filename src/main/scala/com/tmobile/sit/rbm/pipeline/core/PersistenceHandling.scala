@@ -12,7 +12,6 @@ trait SCDProcessing extends Logger{
   def handle_D_Agent_Owner(old_d_agent_owner: DataFrame, new_d_agent_owner: DataFrame) : DataFrame
   def handle_D_Agent(old_d_agent: DataFrame, new_d_agent: DataFrame) : DataFrame
   def handle_D_Content_Type(old_d_content_type: DataFrame, new_d_content_type: DataFrame) : DataFrame
-  //TODO: Nice to have: generic method
 }
 
 class SCDHandler(implicit sparkSession: SparkSession) extends SCDProcessing {
