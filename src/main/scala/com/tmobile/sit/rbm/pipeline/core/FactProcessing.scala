@@ -139,13 +139,12 @@ class Fact(implicit sparkSession: SparkSession) extends FactProcessing {
       .select("Date", "NatCoID", "AgentID", "TypeOfConvID", "AverageDuration", "NoOfConv", /*"TypeOfSM",*/"NoOfSM")
   }
 
-  def preprocess_Acc_UAU_Daily(acc_uau_daily: DataFrame, rbm_activity: DataFrame, d_natco: DataFrame):DataFrame = {
+  def preprocess_Acc_UAU_Daily(acc_uau_daily: DataFrame, rbm_activity: DataFrame):DataFrame = {
 
     logger.info("Preprocessing UAU Accumulator")
-    val uau_today = rbm_activity.as("main")
-      .join(d_natco.as("lookup"),$"main.NatCo" === $"lookup.NatCo", "left")
+    val uau_today = rbm_activity
       .withColumn("Date", split(col("time"), " ").getItem(0))
-      .select("Date",  "NatCoID", "user_id")
+      .select("Date",  "NatCo", "user_id")
 
     acc_uau_daily
       .withColumn("Date", col("Date").cast("date"))
@@ -157,8 +156,9 @@ class Fact(implicit sparkSession: SparkSession) extends FactProcessing {
     logger.info("Processing f_uau_daily")
     //TODO: Decide if d_natco mapping should be here or in accumulator
 
-    new_acc_uau_daily
-      .select("Date", "NatCoID", "user_id")
+    new_acc_uau_daily.as("main")
+      .select("Date", "NatCo", "user_id")
+      .join(d_natco.as("lookup"),$"main.NatCo" === $"lookup.NatCo", "left")
       .withColumn("Date", col("Date").cast("date"))
       .groupBy("Date", "NatCoID")
       .agg(countDistinct("user_id").alias("UAU_daily"))
@@ -171,8 +171,9 @@ class Fact(implicit sparkSession: SparkSession) extends FactProcessing {
     logger.info("Processing f_uau_monthly")
     //TODO: Decide if d_natco mapping should be here or in accumulator
 
-    new_acc_uau_daily
-      .select("Date", "NatCoID", "user_id")
+    new_acc_uau_daily.as("main")
+      .select("Date", "NatCo", "user_id")
+      .join(d_natco.as("lookup"),$"main.NatCo" === $"lookup.NatCo", "left")
       .withColumn("YearMonth", concat_ws("-",year(col("Date")),month(col("Date"))))
       .groupBy("YearMonth", "NatCoID")
       .agg(countDistinct("user_id").alias("UAU_monthly"))
@@ -183,8 +184,9 @@ class Fact(implicit sparkSession: SparkSession) extends FactProcessing {
     logger.info("Processing f_uau_yearly")
     //TODO: Decide if d_natco mapping should be here or in accumulator
 
-    new_acc_uau_daily
-      .select("Date", "NatCoID", "user_id")
+    new_acc_uau_daily.as("main")
+      .select("Date", "NatCo", "user_id")
+      .join(d_natco.as("lookup"),$"main.NatCo" === $"lookup.NatCo", "left")
       .withColumn("Year", year(col("Date")))
       .groupBy("Year", "NatCoID")
       .agg(countDistinct("user_id").alias("UAU_yearly"))
@@ -195,7 +197,9 @@ class Fact(implicit sparkSession: SparkSession) extends FactProcessing {
     logger.info("Processing f_uau_total")
     //TODO: Decide if d_natco mapping should be here or in accumulator
 
-    new_acc_uau_daily
+    new_acc_uau_daily.as("main")
+      .select("Date", "NatCo", "user_id")
+      .join(d_natco.as("lookup"),$"main.NatCo" === $"lookup.NatCo", "left")
       .groupBy( "NatCoID")
       .agg(countDistinct("user_id").alias("UAU_total"))
       .select( "NatCoID", "UAU_total")

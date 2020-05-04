@@ -59,8 +59,7 @@ class CoreProcessing(implicit sparkSession: SparkSession) extends ProcessingCore
     // UAU accumulating facts. Recreate accumulator and reprocess facts
     val new_acc_uau_daily = factProcessor.preprocess_Acc_UAU_Daily(
         persistentData.acc_uau_daily,
-        preprocessedData.rbm_activity,
-        d_natco)
+        preprocessedData.rbm_activity)
 
     val f_uau_daily = factProcessor.process_F_UAU_Daily(new_acc_uau_daily, d_natco)
     val f_uau_monthly = factProcessor.process_F_UAU_Monthly(new_acc_uau_daily, d_natco)
