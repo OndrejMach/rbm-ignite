@@ -95,20 +95,6 @@ class Fact(implicit sparkSession: SparkSession) extends FactProcessing {
                                              d_agent: DataFrame):DataFrame = {
     logger.info("Processing f_conversation_and_sm for day")
 
-    // Calculate a2p + p2a statistics
-    /*
-    val conversationEventsMerged = rbm_billable_events
-      .filter(col("type") =!= "single_message")
-      .withColumn("Date", split(col("FileDate"), " ").getItem(0))
-      .withColumn("Agent", split(col("agent_id"), "@").getItem(0))
-      .select("Date", "NatCo", "Agent", "type", "duration")
-      .groupBy("Date", "NatCo", "Agent")
-      .agg(avg("duration").alias("AverageDurationConv") //Merged duration
-        /*,count("type").alias("NoOfConvMerged") //Merged count not needed */)
-      .orderBy("Agent")
-    */
-    //conversationEventsMerged.show()
-
     // Calculate separate a2p and p2a statistics
     val conversationEventsSplit = rbm_billable_events
       .filter(col("type") =!= "single_message")
