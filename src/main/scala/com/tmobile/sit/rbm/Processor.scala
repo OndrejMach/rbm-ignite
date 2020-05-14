@@ -5,8 +5,6 @@ import com.tmobile.sit.common.readers.CSVReader
 import com.tmobile.sit.rbm.config.Setup
 import com.tmobile.sit.rbm.pipeline.{CoreProcessing, FileMetaData, InputData, MappingData, PersistentData, Pipeline, ResultPaths, ResultWriter, Stage}
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
-
 
 object Processor extends App with Logger {
 

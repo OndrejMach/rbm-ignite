@@ -1,8 +1,9 @@
 package com.tmobile.sit.rbm.pipeline.core
 
+
 import com.tmobile.sit.common.Logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import org.apache.spark.sql.functions.{avg, col, concat_ws, date_format, count, countDistinct, lit, month, regexp_replace, row_number, split, sum, when, year}
+import org.apache.spark.sql.functions.{avg, col, bround, count, countDistinct, date_format, lit, regexp_replace, split, sum, when, year}
 
 /**
  * Class trait/interface which needs to be implemented
@@ -94,40 +95,67 @@ class Fact(implicit sparkSession: SparkSession) extends FactProcessing {
                                              d_agent: DataFrame):DataFrame = {
     logger.info("Processing f_conversation_and_sm for day")
 
-    // Count MT and MO messages per group (ap, pa, sm)
-    val eventsByMessageType = rbm_billable_events
+    // Calculate a2p + p2a statistics
+    /*
+    val conversationEventsMerged = rbm_billable_events
+      .filter(col("type") =!= "single_message")
+      .withColumn("Date", split(col("FileDate"), " ").getItem(0))
+      .withColumn("Agent", split(col("agent_id"), "@").getItem(0))
+      .select("Date", "NatCo", "Agent", "type", "duration")
+      .groupBy("Date", "NatCo", "Agent")
+      .agg(avg("duration").alias("AverageDurationConv") //Merged duration
+        /*,count("type").alias("NoOfConvMerged") //Merged count not needed */)
+      .orderBy("Agent")
+    */
+    //conversationEventsMerged.show()
+
+    // Calculate separate a2p and p2a statistics
+    val conversationEventsSplit = rbm_billable_events
+      .filter(col("type") =!= "single_message")
       .withColumn("Date", split(col("FileDate"), " ").getItem(0))
       .withColumn("Agent", split(col("agent_id"), "@").getItem(0))
       .select("Date", "NatCo", "Agent", "type", "duration")
       .groupBy("Date", "NatCo", "Agent", "type")
-      .agg(count("type").alias("Count"),
-        avg("duration").alias("AverageDuration"))
+      .agg(bround(avg("duration"),2).alias("AverageDurationConv"),
+        count("type").alias("NoOfConv"))
       .withColumn("TypeOfConvID",
         when(col("type") === "a2p_conversation", "1")
-          .otherwise(when(col("type") === "p2a_conversation", "2")
-            .otherwise(when(col("type") === "single_message", "1"))))
+          .otherwise(when(col("type") === "p2a_conversation", "2")))
+      .withColumnRenamed("type","TypeOfConv")
+      .orderBy("Agent")
 
-    //eventsByMessageType.show()
+    //conversationEventsSplit.show()
 
-    val eventsMessageAllTypes = eventsByMessageType
-      .filter(col("type") =!= "single_message")
-      .withColumnRenamed("Count", "NoOfConv")
-      .withColumnRenamed("type", "TypeOfConv")
-      .join(eventsByMessageType
-        .filter(col("type") === "single_message")
-        .withColumnRenamed("AverageDuration","AverageDurationSM")
-        .withColumnRenamed("type", "TypeOfSM"),
-        Seq("Date", "NatCo", "Agent", "TypeOfConvID"),
+    // Calculate sm statistics
+    val singleMessageEvents = rbm_billable_events
+      .filter(col("type") === "single_message")
+      .withColumn("Date", split(col("FileDate"), " ").getItem(0))
+      .withColumn("Agent", split(col("agent_id"), "@").getItem(0))
+      .select("Date", "NatCo", "Agent", "type", "duration")
+      .groupBy("Date", "NatCo", "Agent","type")
+      .agg(/*bround(avg("duration"),2).alias("AverageDurationSM"),*/
+        count("type").alias("NoOfSM"))
+      .withColumn("AverageDurationSM", lit(null))
+      .withColumn("TypeOfConvID",lit("1"))
+      .withColumnRenamed("type","TypeOfSM")
+      .orderBy("Agent")
+
+    //singleMessageEvents.show()
+
+    val eventsMessageAllTypes = conversationEventsSplit
+      .join(singleMessageEvents,
+         Seq("Date", "NatCo", "Agent", "TypeOfConvID"),
         "fullouter")
-      .withColumn("NoOfSM", when(col("Count").isNull, 0).otherwise(col("Count")))
+      .withColumn("NoOfSM", when(col("NoOfSM").isNull, 0).otherwise(col("NoOfSM")))
       .withColumn("AverageDuration",
-        when(col("AverageDuration").isNull, col("AverageDurationSM"))
-          .otherwise(col("AverageDuration")))
-      .drop("Count", "AverageDurationSM")
+        when(col("AverageDurationConv").isNull, col("AverageDurationSM"))
+          .otherwise(col("AverageDurationConv")))
+      .drop("Count", "AverageDurationSM", "AverageDurationConv")
+      .orderBy("Agent")
 
     //eventsMessageAllTypes.show()
 
-    eventsMessageAllTypes.as("main")
+    val fact = eventsMessageAllTypes.as("main")
       .join(d_agent, d_agent("Agent") === eventsMessageAllTypes("Agent"), "left")
       .join(d_natco.as("lookup"),$"main.NatCo" === $"lookup.NatCo", "left")
       //fix for a2p single messages which are not part of a conversation
@@ -136,6 +164,10 @@ class Fact(implicit sparkSession: SparkSession) extends FactProcessing {
           .otherwise(col("NoOfConv")))
       .withColumn("AverageDuration", regexp_replace(col("AverageDuration"), lit("\\."), lit(",")))
       .select("Date", "NatCoID", "AgentID", "TypeOfConvID", "AverageDuration", "NoOfConv", /*"TypeOfSM",*/"NoOfSM")
+
+    //fact.show()
+
+    fact
   }
 
   override def process_F_UAU_Daily(new_acc_uau_daily:DataFrame, d_natco: DataFrame):DataFrame = {
