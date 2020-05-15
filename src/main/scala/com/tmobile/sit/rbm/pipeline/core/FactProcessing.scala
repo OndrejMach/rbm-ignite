@@ -144,7 +144,7 @@ class Fact(implicit sparkSession: SparkSession) extends FactProcessing {
     val fact = eventsMessageAllTypes.as("main")
       .join(d_agent, d_agent("Agent") === eventsMessageAllTypes("Agent"), "left")
       .join(d_natco.as("lookup"),$"main.NatCo" === $"lookup.NatCo", "left")
-      //fix for a2p single messages which are not part of a conversation
+      //handle for a2p single messages which are not part of a conversation
       .withColumn("NoOfConv",
         when(col("TypeOfSM") === "single_message" && col("TypeOfConv").isNull, 0)
           .otherwise(col("NoOfConv")))
