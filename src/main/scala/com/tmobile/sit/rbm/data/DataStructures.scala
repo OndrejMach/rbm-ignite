@@ -1,4 +1,4 @@
-package com.tmobile.sit.rbm.pipeline
+package com.tmobile.sit.rbm.data
 
 import com.tmobile.sit.common.readers.Reader
 import org.apache.spark.sql.DataFrame

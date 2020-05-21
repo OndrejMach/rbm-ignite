@@ -3,7 +3,11 @@ package com.tmobile.sit.rbm
 import com.tmobile.sit.common.Logger
 import com.tmobile.sit.common.readers.CSVReader
 import com.tmobile.sit.rbm.config.Setup
-import com.tmobile.sit.rbm.pipeline.{CoreProcessing, FileMetaData, InputData, MappingData, PersistentData, Pipeline, ResultPaths, ResultWriter, Stage}
+import com.tmobile.sit.rbm.data.{FileMetaData, InputData, MappingData, PersistentData, ResultPaths}
+import com.tmobile.sit.rbm.pipeline.core.CoreProcessing
+import com.tmobile.sit.rbm.pipeline.output.ResultWriter
+import com.tmobile.sit.rbm.pipeline.stage.Stage
+import com.tmobile.sit.rbm.pipeline.Pipeline
 import org.apache.spark.sql.SparkSession
 
 object Processor extends App with Logger {
@@ -54,6 +58,8 @@ object Processor extends App with Logger {
   conf.settings.printAllFields()
 
   implicit val sparkSession: SparkSession = getSparkSession(conf.settings.appName.get)
+
+  logger.info("Web UI: " + sparkSession.sparkContext.uiWebUrl)
 
   val inputReaders = InputData(
     rbm_activity = new CSVReader(conf.settings.inputPath.get + s"${natco_arg}/rbm_activity_${date_arg}*.csv", header = true, delimiter = ";"),

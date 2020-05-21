@@ -1,7 +1,13 @@
 package com.tmobile.sit.rbm.pipeline
 
+import com.tmobile.sit.rbm.data.{FileMetaData, InputData, MappingData, PersistentData, PreprocessedData}
+import com.tmobile.sit.rbm.pipeline.core.ProcessingCore
+import com.tmobile.sit.rbm.pipeline.output.ResultWriter
+import com.tmobile.sit.rbm.pipeline.stage.StageProcessing
+
 /**
  * Spark processing pipeline definition. Class takes processing blocks (each processing block is a class) as parameters and executes them in the desired order.
+ *
  * @param inputData - raw input data
  * @param mappingData - static mapping data
  * @param fileMetaData - file metadata
