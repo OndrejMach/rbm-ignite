@@ -6,7 +6,8 @@ import com.tmobile.sit.rbm.pipeline.output.ResultWriter
 import com.tmobile.sit.rbm.pipeline.stage.StageProcessing
 
 /**
- * Spark processing pipeline definition. Class takes processing blocks (each processing block is a class) as parameters and executes them in the desired order.
+ * Spark processing pipeline definition. Class takes processing blocks (each processing block is a class)
+ * as parameters and executes them in the desired order.
  *
  * @param inputData - raw input data
  * @param mappingData - static mapping data
@@ -22,6 +23,7 @@ class Pipeline(inputData: InputData, mappingData: MappingData, fileMetaData: Fil
                writer: ResultWriter) {
   def run(): Unit = {
 
+    // Create PreprocessedData structure from input readers, metadata and mapping files
     val preprocessedData =
       PreprocessedData(
         stage.preprocessActivity(inputData.rbm_activity.read(),fileMetaData.file_natco_id),
@@ -32,8 +34,10 @@ class Pipeline(inputData: InputData, mappingData: MappingData, fileMetaData: Fil
         stage.preprocessAccUsersDaily(persistentData.acc_users_daily,inputData.rbm_activity.read(),fileMetaData.file_date,fileMetaData.file_natco_id)
       )
 
+    // Run processing core and retrieve result
     val result = core.process(preprocessedData, persistentData)
 
+    // Write result data set
     writer.write(result)
   }
 

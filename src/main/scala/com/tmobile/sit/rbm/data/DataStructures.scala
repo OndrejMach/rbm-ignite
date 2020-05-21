@@ -4,7 +4,7 @@ import com.tmobile.sit.common.readers.Reader
 import org.apache.spark.sql.DataFrame
 
 /**
- * Definition of the case classes used for holding intermediary data structures
+ * Definition of the case classes used for holding data structures
  * */
 
 case class InputData(rbm_activity: Reader,

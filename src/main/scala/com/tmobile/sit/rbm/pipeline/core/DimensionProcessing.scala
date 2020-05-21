@@ -6,7 +6,8 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions.{col, lit, row_number, split}
 
 /**
- * Class trait/interface which needs to be implemented
+ * Class trait/interface which needs to be implemented for creating dimensional data from
+ * input and lookup data
  */
 trait DimensionProcessing extends Logger{
   def process_D_Agent_Owner(rbm_billable_events: DataFrame):DataFrame

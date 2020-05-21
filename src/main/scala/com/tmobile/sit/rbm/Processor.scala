@@ -14,6 +14,7 @@ object Processor extends App with Logger {
 
   logger.info("Started processing")
 
+  // Check arguments
   if(args.length == 0){
     logger.error("Arguments required. Options: -natco=<natco> [-date=<date yyyy-mm-dd>]")
     System.exit(1)
@@ -22,6 +23,7 @@ object Processor extends App with Logger {
   var natco_arg = new Object
   var date_arg = new Object
 
+  // Parse and validate arguments
   for(arg<-args) {
     if(arg.split("=").length == 0){
       logger.error("Incorrect argument format. Options: -natco=<natco> [-date=<date>] ")
@@ -59,8 +61,10 @@ object Processor extends App with Logger {
 
   implicit val sparkSession: SparkSession = getSparkSession(conf.settings.appName.get)
 
+  // The Web UI runs as long as the spark processing runs and is avaialble via the following URL
   logger.info("Web UI: " + sparkSession.sparkContext.uiWebUrl)
 
+  // Prepare data structures
   val inputReaders = InputData(
     rbm_activity = new CSVReader(conf.settings.inputPath.get + s"${natco_arg}/rbm_activity_${date_arg}*.csv", header = true, delimiter = ";"),
     rbm_billable_events = new CSVReader(conf.settings.inputPath.get + s"${natco_arg}/rbm_billable_events_${date_arg}*.csv", header = true, delimiter = ";")
@@ -84,6 +88,7 @@ object Processor extends App with Logger {
     acc_users_daily = new CSVReader(conf.settings.lookupPath.get + s"acc_users_daily_${fileMetaData.file_natco_id}.csv", header = true, delimiter = ";").read()
   )
 
+  // Prepare processing blocks
   val stage = new Stage()
 
   val processingCore = new CoreProcessing()
@@ -92,8 +97,12 @@ object Processor extends App with Logger {
 
   val resultWriter = new ResultWriter(resultPaths, fileMetaData)
 
+  // Prepare orchestration pipeline
   val pipeline = new Pipeline(inputReaders,mappingReaders,fileMetaData,persistentData,stage,processingCore,resultWriter)
 
+  // Run and finish
   pipeline.run()
+
+  logger.info("Processing finished")
 
 }

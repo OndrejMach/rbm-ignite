@@ -6,7 +6,7 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions.{avg, col, bround, count, countDistinct, date_format, lit, regexp_replace, split, sum, when, year}
 
 /**
- * Class trait/interface which needs to be implemented
+ * Class trait/interface which needs to be implemented for creating the daily fact tables
  */
 trait FactProcessing extends Logger{
   def process_F_Message_Content(rbm_activity: DataFrame, d_natco: DataFrame,
@@ -19,13 +19,12 @@ trait FactProcessing extends Logger{
                                     d_agent: DataFrame):DataFrame
 
   def process_F_UAU_Daily(rbm_activity: DataFrame, d_natco: DataFrame):DataFrame
-
+  def process_F_UAU_Monthly(new_acc_uau_daily:DataFrame, d_natco: DataFrame):DataFrame
+  def process_F_UAU_Yearly(new_acc_uau_daily:DataFrame, d_natco: DataFrame):DataFrame
+  def process_F_UAU_Total(new_acc_uau_daily:DataFrame, d_natco: DataFrame):DataFrame
 }
 
-
 class Fact(implicit sparkSession: SparkSession) extends FactProcessing {
-
-
 
   import sparkSession.sqlContext.implicits._
 
@@ -170,7 +169,7 @@ class Fact(implicit sparkSession: SparkSession) extends FactProcessing {
 
   }
 
-  def process_F_UAU_Monthly(new_acc_uau_daily:DataFrame, d_natco: DataFrame):DataFrame = {
+  override def process_F_UAU_Monthly(new_acc_uau_daily:DataFrame, d_natco: DataFrame):DataFrame = {
     logger.info("Processing f_uau_monthly")
 
     new_acc_uau_daily.as("main")
@@ -182,7 +181,7 @@ class Fact(implicit sparkSession: SparkSession) extends FactProcessing {
       .select("YearMonth", "NatCoID", "UAU_monthly")
   }
 
-  def process_F_UAU_Yearly(new_acc_uau_daily:DataFrame, d_natco: DataFrame):DataFrame = {
+  override def process_F_UAU_Yearly(new_acc_uau_daily:DataFrame, d_natco: DataFrame):DataFrame = {
     logger.info("Processing f_uau_yearly")
 
     new_acc_uau_daily.as("main")
@@ -194,7 +193,7 @@ class Fact(implicit sparkSession: SparkSession) extends FactProcessing {
       .select("Year", "NatCoID", "UAU_yearly")
   }
 
-  def process_F_UAU_Total(new_acc_uau_daily:DataFrame, d_natco: DataFrame):DataFrame = {
+  override def process_F_UAU_Total(new_acc_uau_daily:DataFrame, d_natco: DataFrame):DataFrame = {
     logger.info("Processing f_uau_total")
 
     new_acc_uau_daily.as("main")

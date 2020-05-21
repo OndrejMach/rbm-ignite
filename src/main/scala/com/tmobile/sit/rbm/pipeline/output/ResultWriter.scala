@@ -3,18 +3,22 @@ package com.tmobile.sit.rbm.pipeline.output
 import com.tmobile.sit.common.Logger
 import com.tmobile.sit.common.writers.CSVWriter
 import com.tmobile.sit.rbm.data.{FileMetaData, OutputData, ResultPaths}
-import com.tmobile.sit.rbm.pipeline.OutputData
 import org.apache.spark.sql.SparkSession
 
 trait Writer extends Logger{
   def write(output: OutputData): Unit
 }
-
+/**
+ * The ResultWrite class is an implementation of the CSVWriter over a set of output files
+ * required by the RBM pipeline. It takes into consideration the file metadata for the current
+ * file date and natco, as well as the ResultsPath class because it's writing both output and
+ * lookup files for the next iteration
+ */
 class ResultWriter(resultPaths: ResultPaths, fileMetaData: FileMetaData) (implicit sparkSession: SparkSession) extends Writer {
   override def write(outputData: OutputData) =
   {
     logger.info("Writing output files")
-    //logger.info("NOTE: ENABLE RESULT WRITER")
+
     val fileSuffix = fileMetaData.file_date.replace("-","")+"_"+fileMetaData.file_natco_id
 
     CSVWriter(outputData.d_natco, resultPaths.outputPath+"d_natco.csv", delimiter = ";").writeData()

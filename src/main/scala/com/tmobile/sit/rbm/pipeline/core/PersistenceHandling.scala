@@ -6,7 +6,8 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions.{lit, row_number, sum}
 
 /**
- * Class trait/interface which needs to be implemented
+ * Class trait/interface which needs to be implemented for merging old dimensional
+ * data with new data calcualted from the current day's values
  */
 trait SCDProcessing extends Logger{
   def handle_D_Agent_Owner(old_d_agent_owner: DataFrame, new_d_agent_owner: DataFrame) : DataFrame
@@ -36,6 +37,7 @@ class SCDHandler(implicit sparkSession: SparkSession) extends SCDProcessing {
     .withColumn("AgentOwnerID", row_number.over(Window.orderBy("merged.Order")))
     .select("AgentOwnerID","AgentOwner")
   }
+
   override def handle_D_Agent(old_d_agent: DataFrame, new_d_agent: DataFrame): DataFrame = {
     logger.info("Handling d_agent SCD")
 
@@ -55,6 +57,7 @@ class SCDHandler(implicit sparkSession: SparkSession) extends SCDProcessing {
       .withColumn("AgentID", row_number.over(Window.orderBy("merged.Order")))
       .select("AgentID","AgentOwnerID", "Agent")
   }
+
   override def handle_D_Content_Type(old_d_content_type: DataFrame, new_d_content_type: DataFrame): DataFrame = {
     logger.info("Handling d_content_type SCD")
 

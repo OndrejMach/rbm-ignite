@@ -2,7 +2,6 @@ package com.tmobile.sit.rbm.pipeline.core
 
 import com.tmobile.sit.common.Logger
 import com.tmobile.sit.rbm.data.{OutputData, PersistentData, PreprocessedData}
-import com.tmobile.sit.rbm.pipeline.OutputData
 import org.apache.spark.sql.SparkSession
 
 /**
@@ -14,11 +13,12 @@ trait ProcessingCore extends Logger {
 
 /**
  * This class implements the core processing method which creates and updates dimensional data
+ * by calling the respective classes and methods
  */
 class CoreProcessing(implicit sparkSession: SparkSession) extends ProcessingCore {
 
   /**
-   * The process method creates the output files as dimensions and facts
+   * The process method implements the main logic and creates the output structure
    */
   override def process(preprocessedData: PreprocessedData, persistentData: PersistentData): OutputData = {
     logger.info("Executing  processing core")
