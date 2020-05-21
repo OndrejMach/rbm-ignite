@@ -15,14 +15,14 @@ Also it includes the ***spark_common*** library containing readers, writers and 
 
 To be able to get them it is necessary to have access to the CDCP workbench and also ***gradle.properties*** in your home directory (folder .gradle) must be set according to the workbench template.
 
-### Configuration handling implementation
+## Logging
+For logging there is only one configuration file again in the resources folder (one in main and one in test). You can specify logging levels per package. Spark and other supporting libraries are set to log ERRORs, logs from com.tmobile.sit packages log LOG level and higher. For logging SLF4J is used, logger instantiation is inherited from the spark_common package.
+
+## Configuration handling implementation
 Implementation can be found in the package ***config***. There are basically two classes:
 1) Settings - containing a case class to wrap all the parameters at one place.
 2) Setup - a module for handling config retrieval. There are two main part - in the class parameter you can specify the name of your configuration file. Later you are defining how parameters are mapped to the Settings case class.
 Both classes inherit from spark_common which contain some useful features for parameter validation and print.
-
-## Logging
-For logging there is only one configuration file again in the resources folder (one in main and one in test). You can specify logging levels per package. Spark and other supporting libraries are set to log ERRORs, logs from com.tmobile.sit packages log LOG level and higher. For logging SLF4J is used, logger instantiation is inherited from the spark_common package.
 
 ## Processing structure
 Implementation of the processing structure is designed in several logical blocks. The main reason is testability and readability of the implemented code. Generally it's not a good idea to have all the logic (reading data, staging, processing, writing) in one single block and method. 
