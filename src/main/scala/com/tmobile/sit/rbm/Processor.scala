@@ -75,16 +75,28 @@ object Processor extends App with Logger {
     file_natco_id = natco_arg.toString
   )
 
+  //Set config file based on system OS property
+  val mappingPath = if(System.getProperty("os.name").startsWith("Windows")) {
+    logger.info("Using Windows project resources for static mapping")
+    "src/main/resources/inputData/"
+  } else {
+    logger.info("Using Linux HDFS path for static mapping")
+    conf.settings.lookupPath.get
+  }
+
   val mappingReaders = MappingData(
-    NatCoMapping =  new CSVReader("src/main/resources/inputData/NatCoMapping.csv", header = true, delimiter = ";"),
-    ConversationTypeMapping =  new CSVReader("src/main/resources/inputData/ConvTypeMapping.csv", header = true, delimiter = ";"),
-    ContentDescriptionMapping =  new CSVReader("src/main/resources/inputData/ContentDescriptionMapping.csv", header = true, delimiter = ";")
+    NatCoMapping =  new CSVReader(s"${mappingPath}NatCoMapping.csv", header = true, delimiter = ";"),
+    ConversationTypeMapping =  new CSVReader(s"${mappingPath}ConvTypeMapping.csv", header = true, delimiter = ";"),
+    ContentDescriptionMapping =  new CSVReader(s"${mappingPath}ContentDescriptionMapping.csv", header = true, delimiter = ";")
   )
 
   val persistentData = PersistentData(
     d_agent_owner = new CSVReader(conf.settings.outputPath.get + "d_agent_owner.csv", header = true, delimiter = ";").read(),
     d_agent = new CSVReader(conf.settings.outputPath.get + "d_agent.csv", header = true, delimiter = ";").read(),
     d_content_type = new CSVReader(conf.settings.outputPath.get + "d_content_type.csv", header = true, delimiter = ";").read(),
+    f_conversations_and_sm = new CSVReader(conf.settings.outputPath.get + s"f_conversations_and_sm_${fileMetaData.file_natco_id}.csv", header = true, delimiter = ";").read(),
+    f_message_content = new CSVReader(conf.settings.outputPath.get + s"f_message_content_${fileMetaData.file_natco_id}.csv", header = true, delimiter = ";").read(),
+    f_message_conversation = new CSVReader(conf.settings.outputPath.get + s"f_message_conversation_${fileMetaData.file_natco_id}.csv", header = true, delimiter = ";").read(),
     acc_users_daily = new CSVReader(conf.settings.lookupPath.get + s"acc_users_daily_${fileMetaData.file_natco_id}.csv", header = true, delimiter = ";").read()
   )
 

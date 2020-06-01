@@ -3,22 +3,23 @@ package com.tmobile.sit.rbm.pipeline.core
 import com.tmobile.sit.common.Logger
 import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import org.apache.spark.sql.functions.{lit, row_number, sum}
+import org.apache.spark.sql.functions.{col, lit, row_number, sum}
+import org.apache.spark.sql.types.LongType
 
 /**
  * Class trait/interface which needs to be implemented for merging old dimensional
  * data with new data calcualted from the current day's values
  */
-trait SCDProcessing extends Logger{
-  def handle_D_Agent_Owner(old_d_agent_owner: DataFrame, new_d_agent_owner: DataFrame) : DataFrame
-  def handle_D_Agent(old_d_agent: DataFrame, new_d_agent: DataFrame) : DataFrame
-  def handle_D_Content_Type(old_d_content_type: DataFrame, new_d_content_type: DataFrame) : DataFrame
+trait SCDHandling extends Logger{
+  def handle_D_Agent_Owner(old_d_agent_owner:DataFrame,new_d_agent_owner:DataFrame):DataFrame
+  def handle_D_Agent(old_d_agent:DataFrame,new_d_agent:DataFrame):DataFrame
+  def handle_D_Content_Type(old_d_content_type:DataFrame,new_d_content_type:DataFrame):DataFrame
 }
 
-class SCDHandler(implicit sparkSession: SparkSession) extends SCDProcessing {
+class SCDHandler(implicit sparkSession: SparkSession) extends SCDHandling {
   import sparkSession.sqlContext.implicits._
 
-  override def handle_D_Agent_Owner(old_d_agent_owner: DataFrame, new_d_agent_owner: DataFrame): DataFrame = {
+  override def handle_D_Agent_Owner(old_d_agent_owner:DataFrame,new_d_agent_owner:DataFrame):DataFrame = {
     logger.info("Handling d_agent_owner SCD")
 
     old_d_agent_owner
@@ -38,7 +39,7 @@ class SCDHandler(implicit sparkSession: SparkSession) extends SCDProcessing {
     .select("AgentOwnerID","AgentOwner")
   }
 
-  override def handle_D_Agent(old_d_agent: DataFrame, new_d_agent: DataFrame): DataFrame = {
+  override def handle_D_Agent(old_d_agent:DataFrame,new_d_agent:DataFrame):DataFrame = {
     logger.info("Handling d_agent SCD")
 
     old_d_agent
@@ -58,7 +59,7 @@ class SCDHandler(implicit sparkSession: SparkSession) extends SCDProcessing {
       .select("AgentID","AgentOwnerID", "Agent")
   }
 
-  override def handle_D_Content_Type(old_d_content_type: DataFrame, new_d_content_type: DataFrame): DataFrame = {
+  override def handle_D_Content_Type(old_d_content_type:DataFrame,new_d_content_type:DataFrame):DataFrame = {
     logger.info("Handling d_content_type SCD")
 
     old_d_content_type
@@ -77,4 +78,36 @@ class SCDHandler(implicit sparkSession: SparkSession) extends SCDProcessing {
   }
 }
 
+/**
+ * Class trait/interface which needs to be implemented for merging previous
+ * fact data with new data calcualted from the current day's values
+ */
+trait FactPersistence extends Logger {
+  def handle_Accumulating_Fact(old_fact:DataFrame,new_fact:DataFrame,file_date:String):DataFrame
+}
 
+class FactHandler(implicit sparkSession: SparkSession) extends FactPersistence{
+
+  override def handle_Accumulating_Fact(old_fact:DataFrame,new_fact:DataFrame,file_date:String):DataFrame = {
+
+    //Return old fact plus new fact
+    old_fact
+      .withColumn("Date", col("Date").cast("date"))
+      .filter(col("Date") =!= file_date)
+      .union(new_fact)
+      .orderBy("Date")
+  }
+
+  // Exception for F_Message_Content where we need to group and sum values
+  def handle_F_Message_Content(old_fact:DataFrame,new_fact:DataFrame,file_date:String):DataFrame = {
+    old_fact
+      .withColumn("Date", col("Date").cast("date"))
+      .filter(col("Date") =!= file_date)
+      .union(new_fact)
+      .groupBy("Date", "NatCoID", "ContentID", "AgentID")
+      .agg(sum("MT_MessagesByType").cast(LongType).as("MT_MessagesByType"),
+        sum("MO_MessagesByType").cast(LongType).as("MO_MessagesByType"),
+        sum("MTMO_MessagesByType").cast(LongType).as("MTMO_MessagesByType"))
+      .orderBy("Date")
+  }
+}

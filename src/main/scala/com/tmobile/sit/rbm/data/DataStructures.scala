@@ -20,6 +20,9 @@ case class FileMetaData(file_natco_id: String,
 case class PersistentData(d_agent: DataFrame,
                           d_agent_owner: DataFrame,
                           d_content_type: DataFrame,
+                          f_conversations_and_sm: DataFrame,
+                          f_message_content: DataFrame,
+                          f_message_conversation: DataFrame,
                           acc_users_daily: DataFrame)
 
 case class PreprocessedData(rbm_activity: DataFrame,

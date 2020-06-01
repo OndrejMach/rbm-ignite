@@ -19,16 +19,16 @@ class ResultWriter(resultPaths: ResultPaths, fileMetaData: FileMetaData) (implic
   {
     logger.info("Writing output files")
 
-    val fileSuffix = fileMetaData.file_date.replace("-","")+"_"+fileMetaData.file_natco_id
+    //val fileSuffix = fileMetaData.file_date.replace("-","")+"_"+fileMetaData.file_natco_id
 
     CSVWriter(outputData.d_natco, resultPaths.outputPath+"d_natco.csv", delimiter = ";").writeData()
     CSVWriter(outputData.d_content_type, resultPaths.outputPath+"d_content_type.csv", delimiter = ";").writeData()
     CSVWriter(outputData.d_conversation_type, resultPaths.outputPath+"d_conversation_type.csv", delimiter = ";").writeData()
     CSVWriter(outputData.d_agent, resultPaths.outputPath+"d_agent.csv", delimiter = ";").writeData()
     CSVWriter(outputData.d_agent_owner, resultPaths.outputPath+"d_agent_owner.csv", delimiter = ";").writeData()
-    CSVWriter(outputData.f_message_content, resultPaths.outputPath+s"f_message_content_${fileSuffix}.csv", delimiter = ";").writeData()
-    CSVWriter(outputData.f_conversations_and_sm, resultPaths.outputPath+s"f_conversations_and_sm_${fileSuffix}.csv", delimiter = ";").writeData()
-    CSVWriter(outputData.f_message_conversation, resultPaths.outputPath+s"f_message_conversation_${fileSuffix}.csv", delimiter = ";").writeData()
+    CSVWriter(outputData.f_message_content, resultPaths.outputPath+s"f_message_content_${fileMetaData.file_natco_id}.csv", delimiter = ";").writeData()
+    CSVWriter(outputData.f_conversations_and_sm, resultPaths.outputPath+s"f_conversations_and_sm_${fileMetaData.file_natco_id}.csv", delimiter = ";").writeData()
+    CSVWriter(outputData.f_message_conversation, resultPaths.outputPath+s"f_message_conversation_${fileMetaData.file_natco_id}.csv", delimiter = ";").writeData()
     CSVWriter(outputData.f_uau_daily, resultPaths.outputPath+s"f_uau_daily_${fileMetaData.file_natco_id}.csv", delimiter = ";").writeData()
     CSVWriter(outputData.f_uau_monthly, resultPaths.outputPath+s"f_uau_monthly_${fileMetaData.file_natco_id}.csv", delimiter = ";").writeData()
     CSVWriter(outputData.f_uau_yearly, resultPaths.outputPath+s"f_uau_yearly_${fileMetaData.file_natco_id}.csv", delimiter = ";").writeData()

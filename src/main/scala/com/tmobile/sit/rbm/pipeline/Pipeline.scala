@@ -35,7 +35,7 @@ class Pipeline(inputData: InputData, mappingData: MappingData, fileMetaData: Fil
       )
 
     // Run processing core and retrieve result
-    val result = core.process(preprocessedData, persistentData)
+    val result = core.process(preprocessedData, persistentData, fileMetaData)
 
     // Write result data set
     writer.write(result)
