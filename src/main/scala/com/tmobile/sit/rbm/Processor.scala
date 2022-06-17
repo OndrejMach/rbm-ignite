@@ -1,13 +1,13 @@
 package com.tmobile.sit.rbm
 
-import com.tmobile.sit.common.Logger
-import com.tmobile.sit.common.readers.CSVReader
 import com.tmobile.sit.rbm.config.Setup
 import com.tmobile.sit.rbm.data.{FileMetaData, InputData, MappingData, PersistentData, ResultPaths}
 import com.tmobile.sit.rbm.pipeline.core.CoreProcessing
 import com.tmobile.sit.rbm.pipeline.output.ResultWriter
 import com.tmobile.sit.rbm.pipeline.stage.Stage
 import com.tmobile.sit.rbm.pipeline.Pipeline
+import com.tmobile.sit.rbm.pipeline.Logger
+import com.tmobile.sit.rbm.pipeline.CSVReader
 import org.apache.spark.sql.SparkSession
 
 object Processor extends App with Logger {
@@ -66,8 +66,8 @@ object Processor extends App with Logger {
 
   // Prepare data structures
   val inputReaders = InputData(
-    rbm_activity = new CSVReader(conf.settings.inputPath.get + s"${natco_arg}/rbm_activity_${date_arg}*.csv", header = true, delimiter = ";"),
-    rbm_billable_events = new CSVReader(conf.settings.inputPath.get + s"${natco_arg}/rbm_billable_events_${date_arg}*.csv", header = true, delimiter = ";")
+    rbm_activity = new CSVReader(conf.settings.inputPath.get + s"${natco_arg}/rbm_activity_${date_arg}*.csv", header = true, delimiter = "\t"),
+    rbm_billable_events = new CSVReader(conf.settings.inputPath.get + s"${natco_arg}/rbm_billable_events_${date_arg}*.csv", header = true, delimiter = "\t")
   )
 
   val fileMetaData = FileMetaData(

@@ -1,6 +1,6 @@
 package com.tmobile.sit.rbm.pipeline.stage
 
-import com.tmobile.sit.common.Logger
+import com.tmobile.sit.rbm.pipeline.Logger
 import org.apache.spark.sql.functions.{col, lit, split}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 

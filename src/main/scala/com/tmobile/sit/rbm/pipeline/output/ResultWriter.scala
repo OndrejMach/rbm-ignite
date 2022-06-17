@@ -1,7 +1,7 @@
 package com.tmobile.sit.rbm.pipeline.output
 
-import com.tmobile.sit.common.Logger
-import com.tmobile.sit.common.writers.CSVWriter
+import com.tmobile.sit.rbm.pipeline.Logger
+import com.tmobile.sit.rbm.pipeline.CSVWriter
 import com.tmobile.sit.rbm.data.{FileMetaData, OutputData, ResultPaths}
 import org.apache.spark.sql.SparkSession
 

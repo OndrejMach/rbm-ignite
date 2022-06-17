@@ -1,7 +1,5 @@
 package com.tmobile.sit.rbm.config
 
-import com.tmobile.sit.common.config.ServiceConfig
-
 /**
  * Class for reading configuration from environment and mapping values to the case class Settings which holds them.
  * Parameters can be set in a file, as environment variables or JVM parameters.

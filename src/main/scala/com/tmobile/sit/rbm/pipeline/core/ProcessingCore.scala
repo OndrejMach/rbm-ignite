@@ -1,6 +1,6 @@
 package com.tmobile.sit.rbm.pipeline.core
 
-import com.tmobile.sit.common.Logger
+import com.tmobile.sit.rbm.pipeline.Logger
 import com.tmobile.sit.rbm.data.{FileMetaData, OutputData, PersistentData, PreprocessedData}
 import org.apache.spark.sql.SparkSession
 

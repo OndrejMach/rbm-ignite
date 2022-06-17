@@ -1,6 +1,6 @@
 package com.tmobile.sit.rbm.data
 
-import com.tmobile.sit.common.readers.Reader
+import com.tmobile.sit.rbm.pipeline.Reader
 import org.apache.spark.sql.DataFrame
 
 /**

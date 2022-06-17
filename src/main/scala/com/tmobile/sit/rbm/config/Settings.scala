@@ -1,8 +1,6 @@
 package com.tmobile.sit.rbm.config
 
 
-import com.tmobile.sit.common.config.GenericSettings
-
 /**
  * Case class used as to hold job parameters.
  * @param inputPath - input folder
