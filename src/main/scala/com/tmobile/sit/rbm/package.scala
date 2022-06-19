@@ -12,7 +12,7 @@ package object rbm {
 
   def getSparkSession(sparkAppName: String): SparkSession = {
     SparkSession.builder()
-      .master("local[*]")
+      .master("yarn")
       .config("spark.executor.instances", "4")
       .config("spark.executor.memory", "4g")
       .config("spark.executor.cores", "1")
