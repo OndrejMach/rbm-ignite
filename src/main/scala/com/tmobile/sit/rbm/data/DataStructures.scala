@@ -46,4 +46,6 @@ case class OutputData(d_natco: DataFrame,
                       f_uau_monthly: DataFrame,
                       f_uau_yearly: DataFrame,
                       f_uau_total: DataFrame,
-                      new_acc_uau_daily: DataFrame)
+                      new_acc_uau_daily: DataFrame,
+                      newContentMapping: DataFrame
+                     )

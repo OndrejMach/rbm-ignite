@@ -10,9 +10,9 @@ package object rbm {
    * @return - SparkSession set according the the desired configuration and resources expected to be available.
    */
 
-  def getSparkSession(sparkAppName: String): SparkSession = {
+  def getSparkSession(sparkAppName: String, master: String): SparkSession = {
     SparkSession.builder()
-      .master("yarn")
+      .master(master)
       .config("spark.executor.instances", "4")
       .config("spark.executor.memory", "4g")
       .config("spark.executor.cores", "1")

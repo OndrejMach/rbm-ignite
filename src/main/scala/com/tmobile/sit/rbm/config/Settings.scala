@@ -13,6 +13,7 @@ case class Settings(inputPath: Option[String]
                     , lookupPath: Option[String]
                     , outputPath: Option[String]
                     , appName: Option[String]
+                   , master: Option[String]
                    ) extends GenericSettings
 {
   /**

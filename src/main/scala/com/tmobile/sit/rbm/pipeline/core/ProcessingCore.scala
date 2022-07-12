@@ -46,7 +46,8 @@ class CoreProcessing(implicit sparkSession: SparkSession) extends ProcessingCore
     val d_agent = handleSCD.handle_D_Agent(persistentData.d_agent, new_d_agent)
     //**********************
     val new_d_content_type = dimensionProcessor.process_D_Content_Type(preprocessedData.rbm_activity, preprocessedData.ContentDescriptionMapping)
-    val d_content_type = handleSCD.handle_D_Content_Type(persistentData.d_content_type, new_d_content_type)
+    val newContentMapping = new_d_content_type._2
+    val d_content_type = handleSCD.handle_D_Content_Type(persistentData.d_content_type, new_d_content_type._1)
 
     logger.info("Updating accumulating facts")
     // Daily fact tables, always overwrite suffixed with date and natco
@@ -96,6 +97,8 @@ class CoreProcessing(implicit sparkSession: SparkSession) extends ProcessingCore
       f_uau_monthly,
       f_uau_yearly,
       f_uau_total,
-      new_acc_users_daily)
+      new_acc_users_daily,
+      newContentMapping
+    )
   }
 }

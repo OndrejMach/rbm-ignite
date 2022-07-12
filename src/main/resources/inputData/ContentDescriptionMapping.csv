@@ -1,11 +1,14 @@
-OriginalContent;Content
-text_message;Text message
-rich_card;Rich card
-rich_card_carousel;Rich card carousel
-file_transfer_image;File transfer image
-file_transfer_video;File transfer video
-suggested_reply_tap;Suggested reply tap
-suggested_action_tap;Suggested action tap
-delivery_receipt_event;Delivery receipt event
-read_receipt_event;Read receipt event
-spam_report;Spam report
+ContentID;OriginalContent;Content
+1;file_transfer; File Transfer
+2;text_message;Text Message
+3;suggestion_tap;Suggestion Tap
+4;rich_card/carousel;Rich Card
+5;rich_card;Rich card
+6;rich_card_carousel;Rich card carousel
+7;file_transfer_image;File transfer image
+8;file_transfer_video;File transfer video
+9;suggested_reply_tap;Suggested reply tap
+10;suggested_action_tap;Suggested action tap
+11;delivery_receipt_event;Delivery receipt event
+12;read_receipt_event;Read receipt event
+13;spam_report;Spam report

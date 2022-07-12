@@ -16,6 +16,7 @@ class Setup(configFile: String = "rbm_config.windows.conf")  {
       , inputPath = Option(serviceConf.envOrElseConfig("configuration.inputPath.value"))
       , lookupPath = Option(serviceConf.envOrElseConfig("configuration.lookupPath.value"))
       , outputPath = Option(serviceConf.envOrElseConfig("configuration.outputPath.value"))
+      , master = Option(serviceConf.envOrElseConfig("configuration.master.value"))
      )
   }
 }

@@ -2,8 +2,8 @@ package com.tmobile.sit.rbm.pipeline.core
 
 import com.tmobile.sit.rbm.pipeline.Logger
 import org.apache.spark.sql.expressions.Window
-import org.apache.spark.sql.{DataFrame, SparkSession}
-import org.apache.spark.sql.functions.{col, lit, row_number, sum}
+import org.apache.spark.sql.{DataFrame, SparkSession, functions}
+import org.apache.spark.sql.functions.{col, lit, row_number, sum, max}
 import org.apache.spark.sql.types.LongType
 
 /**

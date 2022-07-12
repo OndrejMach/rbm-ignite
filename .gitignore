@@ -6,3 +6,4 @@ spark-warehouse
 out
 src/main/test_data/*
 gradle
+/src/main/resources/rbm_config.OM.conf

@@ -11,7 +11,6 @@ import com.tmobile.sit.rbm.pipeline.CSVReader
 import org.apache.spark.sql.SparkSession
 
 object Processor extends App with Logger {
-
   logger.info("Started processing")
 
   // Check arguments
@@ -44,8 +43,11 @@ object Processor extends App with Logger {
   val configFile = if(System.getProperty("os.name").startsWith("Windows")) {
     logger.info("Detected Windows configuration")
     "rbm_config.windows.conf"
+  } else if (System.getProperty("os.name").startsWith("Mac")) {
+    logger.info("Detected Mac configuration")
+    "rbm_config.OM.conf"
   } else {
-    logger.info("Detected Linux configuration")
+    logger.info("Detected Mac configuration")
     "rbm_config.linux.conf"
   }
 
@@ -59,7 +61,7 @@ object Processor extends App with Logger {
 
   conf.settings.printAllFields()
 
-  implicit val sparkSession: SparkSession = getSparkSession(conf.settings.appName.get)
+  implicit val sparkSession: SparkSession = getSparkSession(conf.settings.appName.get, conf.settings.master.get)
 
   // The Web UI runs as long as the spark processing runs and is avaialble via the following URL
   logger.info("Web UI: " + sparkSession.sparkContext.uiWebUrl)
