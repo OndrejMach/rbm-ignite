@@ -3,8 +3,8 @@ package com.tmobile.sit.rbm.pipeline.core
 import com.tmobile.sit.rbm.pipeline.Logger
 import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.{DataFrame, SparkSession, functions}
-import org.apache.spark.sql.functions.{col, lit, row_number, sum, max}
-import org.apache.spark.sql.types.LongType
+import org.apache.spark.sql.functions.{col, date_format, lit, max, row_number, sum}
+import org.apache.spark.sql.types.{DoubleType, LongType}
 
 /**
  * Class trait/interface which needs to be implemented for merging old dimensional
@@ -75,6 +75,7 @@ class SCDHandler(implicit sparkSession: SparkSession) extends SCDHandling {
       )
       .as("merged")
       .select("ContentID","OriginalContent", "Content")
+      .distinct()
   }
 }
 
@@ -89,21 +90,47 @@ trait FactPersistence extends Logger {
 class FactHandler(implicit sparkSession: SparkSession) extends FactPersistence{
 
   override def handle_Accumulating_Fact(old_fact:DataFrame,new_fact:DataFrame,file_date:String):DataFrame = {
+    handleDate(old_fact,new_fact, file_date)
+      .groupBy("Date", "NatCoID", "AgentID", "TypeOfConvID")
+      .agg(sum("AverageDuration").cast(DoubleType).as("AverageDuration"),
+        sum("NoOfConv").cast(LongType).as("NoOfConv"),
+        sum("NoOfSM").cast(LongType).as("NoOfSM"))
+      .orderBy("Date")
+      .select("Date", "NatCoID", "AgentID", "TypeOfConvID", "AverageDuration", "NoOfConv", /*"TypeOfSM",*/"NoOfSM")
 
     //Return old fact plus new fact
-    old_fact
+    /*old_fact
       .withColumn("Date", col("Date").cast("date"))
       .filter(col("Date") =!= file_date)
       .union(new_fact)
       .orderBy("Date")
-  }
 
-  // Exception for F_Message_Content where we need to group and sum values
-  def handle_F_Message_Content(old_fact:DataFrame,new_fact:DataFrame,file_date:String):DataFrame = {
+     */
+  }
+  private def handleDate(old_fact: DataFrame,new_fact: DataFrame, file_date: String): DataFrame = {
     old_fact
       .withColumn("Date", col("Date").cast("date"))
-      .filter(col("Date") =!= file_date)
-      .union(new_fact)
+      .withColumn("Date", date_format(col("Date"), "yyyy-MM-dd"))
+      .filter(col("Date") =!= lit(file_date))
+      .union(
+        new_fact
+          .withColumn("Date", col("Date").cast("date"))
+          .withColumn("Date", date_format(col("Date"), "yyyy-MM-dd"))
+      )
+  }
+
+  def handle_F_message_conversation(old_fact: DataFrame, new_fact: DataFrame, file_date: String): DataFrame = {
+    handleDate(old_fact, new_fact, file_date)
+      .groupBy("Date", "NatCoID", "AgentID", "TypeOfConvID")
+      .agg(sum("MO_messages").cast(LongType).as("MO_messages"),
+        sum("MT_messages").cast(LongType).as("MT_messages"),
+        sum("MTMO_messages").cast(LongType).as("MTMO_messages"))
+      .orderBy("Date")
+      .select("Date","NatCoID","AgentID","TypeOfConvID","MO_messages", "MT_messages","MTMO_messages")
+  }
+  // Exception for F_Message_Content where we need to group and sum values
+  def handle_F_Message_Content(old_fact:DataFrame,new_fact:DataFrame,file_date:String):DataFrame = {
+    handleDate(old_fact,new_fact,file_date)
       .groupBy("Date", "NatCoID", "ContentID", "AgentID")
       .agg(sum("MT_MessagesByType").cast(LongType).as("MT_MessagesByType"),
         sum("MO_MessagesByType").cast(LongType).as("MO_MessagesByType"),

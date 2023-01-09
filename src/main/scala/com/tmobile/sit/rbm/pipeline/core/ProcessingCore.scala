@@ -64,7 +64,7 @@ class CoreProcessing(implicit sparkSession: SparkSession) extends ProcessingCore
     val new_f_message_conversation = factProcessor.process_F_Message_Conversation(preprocessedData.rbm_billable_events,
       d_natco,
       d_agent)
-    val f_message_conversation = handleFact.handle_Accumulating_Fact(persistentData.f_message_conversation,
+    val f_message_conversation = handleFact.handle_F_message_conversation(persistentData.f_message_conversation,
       new_f_message_conversation,
       fileMetaData.file_date)
     //------------------------

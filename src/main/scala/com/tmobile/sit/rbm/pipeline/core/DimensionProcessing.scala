@@ -78,7 +78,7 @@ class Dimension(implicit sparkSession: SparkSession) extends DimensionProcessing
 
     val overall = newContentTypes.union(specified)
 
-    (overall.drop("type", "activity_id"),
+    (overall.drop("type", "activity_id").distinct(),
       overall.select(col("ContentID"),col("type").as("OriginalContent"),col("Content"))
         .withColumn("Content",
           when(col("Content").isNotNull,

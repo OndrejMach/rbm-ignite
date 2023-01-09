@@ -28,18 +28,21 @@ class Stage  (implicit sparkSession: SparkSession) extends StageProcessing {
                                        file_date: String, file_natco_id: String):DataFrame = {
     logger.info("Preprocessing UAU Accumulator")
     val users_today = rbmActivity
-      .withColumn("Date", split(col("time"), " ").getItem(0))
+      .withColumn("Date", split(col("time"), "T").getItem(0))
       .withColumn("FileDate", lit(file_date))
       .withColumn("NatCo", lit(file_natco_id))
       .select("FileDate",  "Date", "NatCo", "user_id")
 
-    acc_users_daily
+
+    val inter = acc_users_daily
       .filter($"FileDate" =!= lit(file_date))
       .withColumn("Date", col("Date").cast("date"))
       .withColumn("FileDate", col("FileDate").cast("date"))
       .select("FileDate",  "Date", "NatCo", "user_id")
-      .union(users_today)
       .orderBy("FileDate")
+
+    inter.show(false)
+    if (users_today.count()==0) inter else inter.union(users_today).orderBy("FileDate")
   }
 
   // Adding NatCo column based on file source

@@ -19,8 +19,8 @@ object Processor extends App with Logger {
     System.exit(1)
   }
 
-  var natco_arg = new Object
-  var date_arg = new Object
+  var natco_arg = ""
+  var date_arg = ""
 
   // Parse and validate arguments
   for(arg<-args) {
@@ -71,10 +71,15 @@ object Processor extends App with Logger {
     rbm_activity = new CSVReader(conf.settings.inputPath.get + s"/rbm_activity_${date_arg}.csv_${natco_arg}.csv.gz", header = true, delimiter = "\t"),
     rbm_billable_events = new CSVReader(conf.settings.inputPath.get + s"/rbm_billable_events_${date_arg}.csv_${natco_arg}.csv.gz", header = true, delimiter = "\t")
   )
+  if (inputReaders.rbm_activity.read().count() ==0 && inputReaders.rbm_billable_events == 0){
+    sparkSession.stop()
+    logger.info("No data to process")
+    System.exit(0)
+  }
 
   val fileMetaData = FileMetaData(
-    file_date = date_arg.toString,
-    file_natco_id = natco_arg.toString
+    file_date = date_arg,
+    file_natco_id = natco_arg
   )
 
   //Set config file based on system OS property
@@ -116,7 +121,6 @@ object Processor extends App with Logger {
 
   // Run and finish
   pipeline.run()
-
   logger.info("Processing finished")
 
 }

@@ -3,7 +3,7 @@ package com.tmobile.sit.rbm.pipeline.core
 
 import com.tmobile.sit.rbm.pipeline.Logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import org.apache.spark.sql.functions.{avg, col, bround, count, countDistinct, date_format, lit, regexp_replace, split, sum, when, year}
+import org.apache.spark.sql.functions.{avg, bround, col, count, countDistinct, date_format, lit, regexp_replace, split, sum, upper, when, year}
 
 /**
  * Class trait/interface which needs to be implemented for creating the daily fact tables
@@ -34,26 +34,26 @@ class Fact(implicit sparkSession: SparkSession) extends FactProcessing {
 
     // Count MT and MO messages per group
     val activityGroupedByDirection = rbm_activity
-      .withColumn("Date", split(col("time"), " ").getItem(0))
+      .withColumn("Date", split(col("time"), "T").getItem(0))
       .withColumn("Agent", split(col("agent_id"), "@").getItem(0))
       .select("Date", "NatCo", "Agent", "type", "direction")
       .groupBy("Date", "NatCo", "Agent", "type","direction")
-      .agg(count("type").alias("Count"))
+      .agg(count("*").alias("Count"))
 
     val activitiesGrouped_AllDirections = activityGroupedByDirection
       // Get MT+MO counts by not grouping on direction
       .groupBy("Date", "NatCo", "Agent", "type")
       .agg(sum("Count").alias("MTMO_MessagesByType"))
       // Add MT message counts from previous step
-      .join(activityGroupedByDirection.filter(col("direction") === "mt"),
+      .join(activityGroupedByDirection.filter(upper(col("direction")) === "MT"),
         Seq("Date", "NatCo", "Agent", "type"), "left")
       .withColumn("MT_MessagesByType", when(col("Count").isNull, 0).otherwise(col("Count")))
-      .drop("direction", "Count")
+      .select("Date", "NatCo", "Agent", "type","MT_MessagesByType", "MTMO_MessagesByType" )
       // Add MO message counts from previous step
-      .join(activityGroupedByDirection.filter(col("direction") === "mo"),
+      .join(activityGroupedByDirection.filter(upper(col("direction")) === "MO"),
         Seq("Date", "NatCo", "Agent", "type"), "left")
       .withColumn("MO_MessagesByType", when(col("Count").isNull, 0).otherwise(col("Count")))
-      .drop("direction", "Count")
+      .select("Date", "NatCo", "Agent", "type","MT_MessagesByType", "MO_MessagesByType", "MTMO_MessagesByType" )
 
     // Create final MessagesByType fact by joining on Lookups to get the FKs
     activitiesGrouped_AllDirections.as("main")
@@ -69,8 +69,9 @@ class Fact(implicit sparkSession: SparkSession) extends FactProcessing {
     logger.info("Processing f_message_conversation for day")
 
     val eventsByConvType = rbm_billable_events
-      //TODO: Date is open topic since it's the one gotten from the filename
-      .withColumn("Date", split(col("FileDate"), " ").getItem(0))
+      //RESOLVED: Date is open topic since it's the one gotten from the filename
+      //.withColumn("Date", split(col("FileDate"), " ").getItem(0))
+      .withColumn("Date", split(col("start_time"), "T").getItem(0))
       .withColumn("Agent", split(col("agent_id"), "@").getItem(0))
       .select("Date", "NatCo", "Agent", "type", "mt_messages", "mo_messages")
       .groupBy("Date", "NatCo", "Agent", "type")
@@ -97,7 +98,8 @@ class Fact(implicit sparkSession: SparkSession) extends FactProcessing {
     // Calculate separate a2p and p2a statistics
     val conversationEventsSplit = rbm_billable_events
       .filter(col("type") =!= "single_message")
-      .withColumn("Date", split(col("FileDate"), " ").getItem(0))
+      //.withColumn("Date", split(col("FileDate"), " ").getItem(0))
+      .withColumn("Date", split(col("start_time"), "T").getItem(0))
       .withColumn("Agent", split(col("agent_id"), "@").getItem(0))
       .select("Date", "NatCo", "Agent", "type", "duration")
       .groupBy("Date", "NatCo", "Agent", "type")
