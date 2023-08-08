@@ -14,7 +14,7 @@ trait StageProcessing extends Logger{
   def preprocessConversationTypeMapping(input: DataFrame) : DataFrame
   def preprocessContentDescriptionMapping(input: DataFrame) : DataFrame
   def preprocessAccUsersDaily(acc_uau_daily: DataFrame, rbmActivity: DataFrame,
-                              file_date: String, file_natco_id: String):DataFrame
+                              file_date: String, file_natco_id: String,d_agent: DataFrame):DataFrame
 }
 
 /**
@@ -25,20 +25,22 @@ class Stage  (implicit sparkSession: SparkSession) extends StageProcessing {
   import sparkSession.sqlContext.implicits._
 
   override def preprocessAccUsersDaily(acc_users_daily: DataFrame, rbmActivity: DataFrame,
-                                       file_date: String, file_natco_id: String):DataFrame = {
+                                       file_date: String, file_natco_id: String,d_agent: DataFrame ):DataFrame = {
     logger.info("Preprocessing UAU Accumulator")
     val users_today = rbmActivity
+      .withColumn("Agent", split(col("agent_id"), "@").getItem(0))
       .withColumn("Date", split(col("time"), "T").getItem(0))
       .withColumn("FileDate", lit(file_date))
       .withColumn("NatCo", lit(file_natco_id))
-      .select("FileDate",  "Date", "NatCo", "user_id")
+      .join(d_agent, Seq("Agent"), "left")
+      .select("FileDate",  "Date", "NatCo","AgentID" ,"user_id")
 
 
     val inter = acc_users_daily
       .filter($"FileDate" =!= lit(file_date))
       .withColumn("Date", col("Date").cast("date"))
       .withColumn("FileDate", col("FileDate").cast("date"))
-      .select("FileDate",  "Date", "NatCo", "user_id")
+      .select("FileDate",  "Date", "NatCo", "AgentID","user_id")
       .orderBy("FileDate")
 
     inter.show(false)

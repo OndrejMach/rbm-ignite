@@ -4,6 +4,7 @@ package com.tmobile.sit.rbm.pipeline.core
 import com.tmobile.sit.rbm.pipeline.Logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions.{avg, bround, col, count, countDistinct, date_format, lit, regexp_replace, split, sum, upper, when, year}
+import org.apache.spark.sql.types.StringType
 
 /**
  * Class trait/interface which needs to be implemented for creating the daily fact tables
@@ -67,7 +68,7 @@ class Fact(implicit sparkSession: SparkSession) extends FactProcessing {
                                               d_natco: DataFrame,
                                               d_agent: DataFrame):DataFrame = {
     logger.info("Processing f_message_conversation for day")
-
+    //rbm_billable_events.select(split(col("start_time").cast(StringType), "T").getItem(0)).show(1000, false)
     val eventsByConvType = rbm_billable_events
       //RESOLVED: Date is open topic since it's the one gotten from the filename
       //.withColumn("Date", split(col("FileDate"), " ").getItem(0))
@@ -80,12 +81,13 @@ class Fact(implicit sparkSession: SparkSession) extends FactProcessing {
       .withColumn("MTMO_messages", col("mo_messages") + col("mt_messages"))
 
     val eventsByConvAllTypes = eventsByConvType.as("main")
-      .filter(col("type") =!= "single_message")
+      //.filter(col("type") =!= "single_message")
+      .filter((col("type") === "a2p_conversation") or (col("type") === "p2a_conversation") )
       .join(d_agent, d_agent("Agent") === eventsByConvType("Agent"), "left")
       .join(d_natco.as("lookup"),$"main.NatCo" === $"lookup.NatCo", "left")
       .withColumn("TypeOfConvID",
-        when(col("type") === "a2p_conversation", "1")
-          .otherwise(when(col("type") === "p2a_conversation", "2")))
+        when(col("type") === "p2a_conversation", "2")
+          .otherwise("1"))
       .select("Date","NatCoID","AgentID","TypeOfConvID","MO_messages", "MT_messages","MTMO_messages")
 
     eventsByConvAllTypes
@@ -94,66 +96,43 @@ class Fact(implicit sparkSession: SparkSession) extends FactProcessing {
   override def process_F_Conversation_And_SM(rbm_billable_events: DataFrame, d_natco: DataFrame,
                                              d_agent: DataFrame):DataFrame = {
     logger.info("Processing f_conversation_and_sm for day")
-
-    // Calculate separate a2p and p2a statistics
-    val conversationEventsSplit = rbm_billable_events
-      .filter(col("type") =!= "single_message")
-      //.withColumn("Date", split(col("FileDate"), " ").getItem(0))
+    val eventsMessageAllTypes = rbm_billable_events
       .withColumn("Date", split(col("start_time"), "T").getItem(0))
       .withColumn("Agent", split(col("agent_id"), "@").getItem(0))
-      .select("Date", "NatCo", "Agent", "type", "duration")
+      .na.fill(0,Array("duration"))
+      .withColumn("conversation",
+        when((col("type") === "a2p_conversation") or (col("type") === "p2a_conversation"), lit(1)
+        ).otherwise(lit(0))
+      )
+      .withColumn("single_message",
+        when((col("type") === "single_message"), lit(1)
+        ).otherwise(lit(0))
+      )
+      .withColumn("basic_message",
+        when((col("type") === "basic_message"), lit(1)
+        ).otherwise(lit(0))
+      )
       .groupBy("Date", "NatCo", "Agent", "type")
-      .agg(bround(avg("duration"),2).alias("AverageDurationConv"),
-        count("type").alias("NoOfConv"))
+      .agg(
+        bround(avg("duration"),2).alias("AverageDuration"),
+        sum("conversation").alias("NoOfConv"),
+        sum("single_message").alias("NoOfSM"),
+        sum("basic_message").alias("NoOfBM")
+      )
       .withColumn("TypeOfConvID",
-        when(col("type") === "a2p_conversation", "1")
-          .otherwise(when(col("type") === "p2a_conversation", "2")))
-      .withColumnRenamed("type","TypeOfConv")
-      .orderBy("Agent")
-
-    //conversationEventsSplit.show()
-
-    // Calculate sm statistics
-    val singleMessageEvents = rbm_billable_events
-      .filter(col("type") === "single_message")
-      .withColumn("Date", split(col("FileDate"), " ").getItem(0))
-      .withColumn("Agent", split(col("agent_id"), "@").getItem(0))
-      .select("Date", "NatCo", "Agent", "type", "duration")
-      .groupBy("Date", "NatCo", "Agent","type")
-      .agg(/*bround(avg("duration"),2).alias("AverageDurationSM"),*/
-        count("type").alias("NoOfSM"))
-      .withColumn("AverageDurationSM", lit(null))
-      .withColumn("TypeOfConvID",lit("1"))
-      .withColumnRenamed("type","TypeOfSM")
-      .orderBy("Agent")
-
-    //singleMessageEvents.show()
-
-    val eventsMessageAllTypes = conversationEventsSplit
-      .join(singleMessageEvents,
-         Seq("Date", "NatCo", "Agent", "TypeOfConvID"),
-        "fullouter")
-      .withColumn("NoOfSM", when(col("NoOfSM").isNull, 0).otherwise(col("NoOfSM")))
-      .withColumn("AverageDuration",
-        when(col("AverageDurationConv").isNull, col("AverageDurationSM"))
-          .otherwise(col("AverageDurationConv")))
-      .drop("Count", "AverageDurationSM", "AverageDurationConv")
-      .orderBy("Agent")
-
-    //eventsMessageAllTypes.show()
+        when(col("type") === "p2a_conversation", lit("2"))
+          .otherwise(lit("1")))
 
     val fact = eventsMessageAllTypes.as("main")
       .join(d_agent, d_agent("Agent") === eventsMessageAllTypes("Agent"), "left")
       .join(d_natco.as("lookup"),$"main.NatCo" === $"lookup.NatCo", "left")
       //handle for a2p single messages which are not part of a conversation
-      .withColumn("NoOfConv",
-        when(col("TypeOfSM") === "single_message" && col("TypeOfConv").isNull, 0)
-          .otherwise(col("NoOfConv")))
-      .withColumn("AverageDuration", regexp_replace(col("AverageDuration"), lit("\\."), lit(",")))
-      .select("Date", "NatCoID", "AgentID", "TypeOfConvID", "AverageDuration", "NoOfConv", /*"TypeOfSM",*/"NoOfSM")
-
+      //.withColumn("NoOfConv",
+       // when((col("TypeOfSM") === "single_message" or col("TypeOfSM") === "basic_message") && col("TypeOfConv").isNull, 0)
+       //   .otherwise(col("NoOfConv")))
+      //.withColumn("AverageDuration", regexp_replace(col("AverageDuration"), lit("\\."), lit(",")))
+      .select("Date", "NatCoID", "AgentID", "TypeOfConvID", "AverageDuration", "NoOfConv", /*"TypeOfSM",*/"NoOfSM", "NoOfBM")
     //fact.show()
-
     fact
   }
 
@@ -161,12 +140,12 @@ class Fact(implicit sparkSession: SparkSession) extends FactProcessing {
     logger.info("Processing f_uau_daily")
 
     new_acc_uau_daily.as("main")
-      .select("Date", "NatCo", "user_id")
+      .select("Date", "NatCo","AgentID" ,"user_id")
       .join(d_natco.as("lookup"),$"main.NatCo" === $"lookup.NatCo", "left")
       .withColumn("Date", col("Date").cast("date"))
-      .groupBy("Date", "NatCoID")
+      .groupBy("Date", "NatCoID", "AgentID")
       .agg(countDistinct("user_id").alias("UAU_daily"))
-      .select("Date", "NatCoID", "UAU_daily")
+      .select("Date", "NatCoID", "AgentID","UAU_daily")
       .orderBy("Date")
 
   }
@@ -175,34 +154,34 @@ class Fact(implicit sparkSession: SparkSession) extends FactProcessing {
     logger.info("Processing f_uau_monthly")
 
     new_acc_uau_daily.as("main")
-      .select("Date", "NatCo", "user_id")
+      .select("Date", "NatCo", "AgentID","user_id")
       .join(d_natco.as("lookup"),$"main.NatCo" === $"lookup.NatCo", "left")
       .withColumn("YearMonth", date_format(col("Date"),"yyyy-MM"))
-      .groupBy("YearMonth", "NatCoID")
+      .groupBy("YearMonth", "NatCoID", "AgentID")
       .agg(countDistinct("user_id").alias("UAU_monthly"))
-      .select("YearMonth", "NatCoID", "UAU_monthly")
+      .select("YearMonth", "NatCoID","AgentID" ,"UAU_monthly")
   }
 
   override def process_F_UAU_Yearly(new_acc_uau_daily:DataFrame, d_natco: DataFrame):DataFrame = {
     logger.info("Processing f_uau_yearly")
 
     new_acc_uau_daily.as("main")
-      .select("Date", "NatCo", "user_id")
+      .select("Date", "NatCo","AgentID" ,"user_id")
       .join(d_natco.as("lookup"),$"main.NatCo" === $"lookup.NatCo", "left")
       .withColumn("Year", year(col("Date")))
-      .groupBy("Year", "NatCoID")
+      .groupBy("Year", "NatCoID", "AgentID")
       .agg(countDistinct("user_id").alias("UAU_yearly"))
-      .select("Year", "NatCoID", "UAU_yearly")
+      .select("Year", "NatCoID","AgentID" ,"UAU_yearly")
   }
 
   override def process_F_UAU_Total(new_acc_uau_daily:DataFrame, d_natco: DataFrame):DataFrame = {
     logger.info("Processing f_uau_total")
 
     new_acc_uau_daily.as("main")
-      .select("Date", "NatCo", "user_id")
+      .select("Date", "NatCo","AgentID" ,"user_id")
       .join(d_natco.as("lookup"),$"main.NatCo" === $"lookup.NatCo", "left")
-      .groupBy( "NatCoID")
+      .groupBy( "NatCoID", "AgentID")
       .agg(countDistinct("user_id").alias("UAU_total"))
-      .select( "NatCoID", "UAU_total")
+      .select( "NatCoID","AgentID" ,"UAU_total")
   }
 }

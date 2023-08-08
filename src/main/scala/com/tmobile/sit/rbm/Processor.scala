@@ -1,7 +1,6 @@
 package com.tmobile.sit.rbm
 
-import com.tmobile.sit.rbm.config.Setup
-import com.tmobile.sit.rbm.data.{FileMetaData, InputData, MappingData, PersistentData, ResultPaths}
+import com.tmobile.sit.rbm.data.{FileMetaData, InputData, InputTypes, MappingData, PersistentData, ResultPaths}
 import com.tmobile.sit.rbm.pipeline.core.CoreProcessing
 import com.tmobile.sit.rbm.pipeline.output.ResultWriter
 import com.tmobile.sit.rbm.pipeline.stage.Stage
@@ -10,12 +9,19 @@ import com.tmobile.sit.rbm.pipeline.Logger
 import com.tmobile.sit.rbm.pipeline.CSVReader
 import org.apache.spark.sql.SparkSession
 
+
+
 object Processor extends App with Logger {
+  //billing_event_id        type    agent_id        agent_owner
+  // billing_party   max_duration_single_message
+  // max_duration_a2p_conversation        max_duration_p2a_conversation
+  // start_time      duration        mt_messages     mo_messages
+  // size_kilobytes  agent_name      owner_name
   logger.info("Started processing")
 
   // Check arguments
   if(args.length == 0){
-    logger.error("Arguments required. Options: -natco=<natco> [-date=<date yyyy-mm-dd>]")
+    logger.error("Arguments required. Options: -natco=<natco> [-date=<date yyyy-mm-dd>] | uau ")
     System.exit(1)
   }
 
@@ -23,9 +29,11 @@ object Processor extends App with Logger {
   var date_arg = ""
 
   // Parse and validate arguments
+  if (args(0) == "uau")
+
   for(arg<-args) {
     if(arg.split("=").length == 0){
-      logger.error("Incorrect argument format. Options: -natco=<natco> [-date=<date>] ")
+      logger.error("Incorrect argument format. Options: -natco=<natco> [-date=<date>] | uau")
     }
     else{
       if(arg.split("=")(0).equals("-natco")) {
@@ -39,27 +47,7 @@ object Processor extends App with Logger {
     }
   }
 
-  //Set config file based on system OS property
-  val configFile = if(System.getProperty("os.name").startsWith("Windows")) {
-    logger.info("Detected Windows configuration")
-    "rbm_config.windows.conf"
-  } else if (System.getProperty("os.name").startsWith("Mac")) {
-    logger.info("Detected Mac configuration")
-    "rbm_config.OM.conf"
-  } else {
-    logger.info("Detected Mac configuration")
-    "rbm_config.linux.conf"
-  }
-
-  val conf = new Setup(configFile)
-
-  if (!conf.settings.isAllDefined) {
-    logger.error("Application not properly configured!!")
-    conf.settings.printMissingFields()
-    System.exit(1)
-  }
-
-  conf.settings.printAllFields()
+  val conf = getConfig()
 
   implicit val sparkSession: SparkSession = getSparkSession(conf.settings.appName.get, conf.settings.master.get)
 
@@ -68,8 +56,8 @@ object Processor extends App with Logger {
 
   // Prepare data structures
   val inputReaders = InputData(
-    rbm_activity = new CSVReader(conf.settings.inputPath.get + s"/rbm_activity_${date_arg}.csv_${natco_arg}.csv.gz", header = true, delimiter = "\t"),
-    rbm_billable_events = new CSVReader(conf.settings.inputPath.get + s"/rbm_billable_events_${date_arg}.csv_${natco_arg}.csv.gz", header = true, delimiter = "\t")
+    rbm_activity = new CSVReader(conf.settings.inputPath.get + s"/rbm_activity_${date_arg}.csv_${natco_arg}.csv.gz", header = true, delimiter = "\t", schema = Some(InputTypes.activityType)),
+    rbm_billable_events = new CSVReader(conf.settings.inputPath.get + s"/rbm_billable_events_${date_arg}.csv_${natco_arg}.csv.gz", header = true, delimiter = "\t", schema = Some(InputTypes.billableType))
   )
   if (inputReaders.rbm_activity.read().count() ==0 && inputReaders.rbm_billable_events == 0){
     sparkSession.stop()

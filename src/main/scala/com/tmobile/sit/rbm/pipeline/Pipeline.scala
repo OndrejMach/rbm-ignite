@@ -31,7 +31,7 @@ class Pipeline(inputData: InputData, mappingData: MappingData, fileMetaData: Fil
         stage.preprocessNatCoMapping(mappingData.NatCoMapping.read()),
         stage.preprocessConversationTypeMapping(mappingData.ConversationTypeMapping.read()),
         stage.preprocessContentDescriptionMapping(mappingData.ContentDescriptionMapping.read()),
-        stage.preprocessAccUsersDaily(persistentData.acc_users_daily,inputData.rbm_activity.read(),fileMetaData.file_date,fileMetaData.file_natco_id)
+        stage.preprocessAccUsersDaily(persistentData.acc_users_daily,inputData.rbm_activity.read(),fileMetaData.file_date,fileMetaData.file_natco_id, persistentData.d_agent)
       )
 
     // Run processing core and retrieve result

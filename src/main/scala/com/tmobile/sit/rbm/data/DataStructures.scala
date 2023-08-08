@@ -2,6 +2,8 @@ package com.tmobile.sit.rbm.data
 
 import com.tmobile.sit.rbm.pipeline.Reader
 import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.types.StructType
+import org.apache.spark.sql.types.{ LongType, StringType, StructField}
 
 /**
  * Definition of the case classes used for holding data structures
@@ -49,3 +51,33 @@ case class OutputData(d_natco: DataFrame,
                       new_acc_uau_daily: DataFrame,
                       newContentMapping: DataFrame
                      )
+object InputTypes {
+  val billableType = StructType(Array(
+    StructField("billing_event_id", StringType, true),
+    StructField("type", StringType, true),
+    StructField("agent_id", StringType, true),
+    StructField("agent_owner", StringType, true),
+    StructField("billing_party", StringType, true),
+    StructField("max_duration_single_message", LongType, true),
+    StructField("max_duration_a2p_conversation", LongType, true),
+    StructField("max_duration_p2a_conversation", LongType, true),
+    StructField("start_time", StringType, true),
+    StructField("duration", LongType, true),
+    StructField("mt_messages", LongType, true),
+    StructField("mo_messages", LongType, true),
+    StructField("size_kilobytes", LongType, true),
+    StructField("agent_name", StringType, true),
+    StructField("owner_name", StringType, true)
+  ))
+  //activity_id     billing_event_id        agent_id        user_id direction       time    type    size_bytes
+  val activityType = StructType(Array(
+    StructField("activity_id", StringType, true),
+    StructField("billing_event_id", StringType, true),
+    StructField("agent_id", StringType, true),
+    StructField("user_id", StringType, true),
+    StructField("direction", StringType, true),
+    StructField("time", StringType, true),
+    StructField("type", StringType, true),
+    StructField("size_bytes", LongType, true)
+  ))
+}

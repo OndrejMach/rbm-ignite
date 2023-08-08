@@ -1,8 +1,11 @@
 package com.tmobile.sit
 
+import com.tmobile.sit.rbm.config.Setup
 import org.apache.spark.sql.SparkSession
+import com.tmobile.sit.rbm.pipeline.Logger
 
-package object rbm {
+
+package object rbm extends  Logger {
   /**
    * Method for returning SparkSession. It sets some basic parameters which can be easily overwritten in spark-submit on production or test cluster.
    * It expects appName as a parameter for better identification of this job on cluster where hundreds of applications may be running.
@@ -23,5 +26,29 @@ package object rbm {
       .config("spark.dynamicAllocation.enabled", "true")
       .config("spark.app.name", sparkAppName)
       .getOrCreate()
+  }
+
+  def getConfig(): Setup = {
+    val configFile = if (System.getProperty("os.name").startsWith("Windows")) {
+      logger.info("Detected Windows configuration")
+      "rbm_config.windows.conf"
+    } else if (System.getProperty("os.name").startsWith("Mac")) {
+      logger.info("Detected Mac configuration")
+      "rbm_config.OM.conf"
+    } else {
+      logger.info("Detected Mac configuration")
+      "rbm_config.linux.conf"
+    }
+
+     val conf = new Setup(configFile)
+
+    if (!conf.settings.isAllDefined) {
+      logger.error("Application not properly configured!!")
+      conf.settings.printMissingFields()
+      System.exit(1)
+    }
+
+    conf.settings.printAllFields()
+    conf
   }
 }

@@ -3,7 +3,7 @@ package com.tmobile.sit.rbm.pipeline.core
 import com.tmobile.sit.rbm.pipeline.Logger
 import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.{DataFrame, SparkSession, functions}
-import org.apache.spark.sql.functions.{col, date_format, lit, max, row_number, sum}
+import org.apache.spark.sql.functions.{avg, bround, col, date_format, lit, max, regexp_replace, row_number, sum}
 import org.apache.spark.sql.types.{DoubleType, LongType}
 
 /**
@@ -91,12 +91,16 @@ class FactHandler(implicit sparkSession: SparkSession) extends FactPersistence{
 
   override def handle_Accumulating_Fact(old_fact:DataFrame,new_fact:DataFrame,file_date:String):DataFrame = {
     handleDate(old_fact,new_fact, file_date)
+      .withColumn("AverageDuration",regexp_replace(col("AverageDuration"), lit(","), lit("\\.")).cast(DoubleType) )
       .groupBy("Date", "NatCoID", "AgentID", "TypeOfConvID")
-      .agg(sum("AverageDuration").cast(DoubleType).as("AverageDuration"),
+      .agg(bround(avg("AverageDuration"), 2).as("AverageDuration"),
         sum("NoOfConv").cast(LongType).as("NoOfConv"),
-        sum("NoOfSM").cast(LongType).as("NoOfSM"))
+        sum("NoOfSM").cast(LongType).as("NoOfSM"),
+        sum("NoOfBM").cast(LongType).as("NoOfBM")
+      )
+      .withColumn("AverageDuration", regexp_replace(col("AverageDuration"), lit("\\."), lit(",")))
       .orderBy("Date")
-      .select("Date", "NatCoID", "AgentID", "TypeOfConvID", "AverageDuration", "NoOfConv", /*"TypeOfSM",*/"NoOfSM")
+      .select("Date", "NatCoID", "AgentID", "TypeOfConvID", "AverageDuration", "NoOfConv", /*"TypeOfSM",*/"NoOfSM", "NoOfBM")
 
     //Return old fact plus new fact
     /*old_fact
@@ -110,13 +114,14 @@ class FactHandler(implicit sparkSession: SparkSession) extends FactPersistence{
   private def handleDate(old_fact: DataFrame,new_fact: DataFrame, file_date: String): DataFrame = {
     old_fact
       .withColumn("Date", col("Date").cast("date"))
-      .withColumn("Date", date_format(col("Date"), "yyyy-MM-dd"))
+      //.withColumn("Date", date_format(col("Date"), "yyyy-MM-dd"))
       .filter(col("Date") =!= lit(file_date))
-      .union(
+       .union(
         new_fact
           .withColumn("Date", col("Date").cast("date"))
-          .withColumn("Date", date_format(col("Date"), "yyyy-MM-dd"))
+          //.withColumn("Date", date_format(col("Date"), "yyyy-MM-dd"))
       )
+
   }
 
   def handle_F_message_conversation(old_fact: DataFrame, new_fact: DataFrame, file_date: String): DataFrame = {
