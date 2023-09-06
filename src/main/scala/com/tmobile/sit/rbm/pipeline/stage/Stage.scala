@@ -2,6 +2,7 @@ package com.tmobile.sit.rbm.pipeline.stage
 
 import com.tmobile.sit.rbm.pipeline.Logger
 import org.apache.spark.sql.functions.{col, lit, split}
+import org.apache.spark.sql.types.StringType
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
 /**
@@ -43,7 +44,7 @@ class Stage  (implicit sparkSession: SparkSession) extends StageProcessing {
       .select("FileDate",  "Date", "NatCo", "AgentID","user_id")
       .orderBy("FileDate")
 
-    inter.show(false)
+
     if (users_today.count()==0) inter else inter.union(users_today).orderBy("FileDate")
   }
 

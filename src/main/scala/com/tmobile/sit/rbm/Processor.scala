@@ -29,8 +29,6 @@ object Processor extends App with Logger {
   var date_arg = ""
 
   // Parse and validate arguments
-  if (args(0) == "uau")
-
   for(arg<-args) {
     if(arg.split("=").length == 0){
       logger.error("Incorrect argument format. Options: -natco=<natco> [-date=<date>] | uau")
