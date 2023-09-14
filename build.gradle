@@ -52,13 +52,13 @@ dependencies {
     implementation "net.sf.ucanaccess:ucanaccess:4.0.4"
 
     implementation group: 'com.crealytics', name: 'spark-excel_2.11', version: '0.12.0'
-/*
-    implementation 'org.scalatest:scalatest_2.11:3.0.0'
-    implementation 'junit:junit:4.12'
-    testimplementation 'com.holdenkarau:spark-testing-base_2.11:2.3.0_0.11.0'
-    testimplementation 'org.apache.spark:spark-hive_2.11:2.3.0'
+
+    testCompile 'org.scalatest:scalatest_2.11:3.0.0'
+    testCompile 'junit:junit:4.12'
+    testCompile "com.holdenkarau:spark-testing-base_2.11:2.4.0_0.12.0"
+    testCompile group: 'org.scalamock', name: "scalamock-scalatest-support_2.11", version: '3.6.0'
+    testCompile 'org.apache.spark:spark-hive_2.11:2.3.0'
 
 
- */
 }
 

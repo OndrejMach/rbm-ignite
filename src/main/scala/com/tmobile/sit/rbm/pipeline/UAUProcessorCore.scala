@@ -1,7 +1,6 @@
 package com.tmobile.sit.rbm.pipeline
 
 import org.apache.spark.sql.DataFrame
-import com.tmobile.sit.rbm.pipeline.Logger
 import org.apache.spark.sql.functions.desc
 
 trait UAUProcessorInterface  {
